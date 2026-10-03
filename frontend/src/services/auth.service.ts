@@ -1,3 +1,5 @@
+import type { AuthUser } from '@/types/user.type';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 type RegisterPayload = {
@@ -10,16 +12,9 @@ type RegisterPayload = {
 type RegisterResponse = {
   success: boolean;
   message: string;
-  user: {
-    id: number;
-    fullName: string;
-    email: string;
-    phone: string;
-    role: string;
-  };
+  user: AuthUser;
 };
 
-export type AuthUser = RegisterResponse['user'] & { isActive?: boolean };
 
 type LoginResponse = {
   success: boolean;

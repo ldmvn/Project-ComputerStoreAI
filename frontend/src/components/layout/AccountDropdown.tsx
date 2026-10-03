@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, LogOut, ShoppingBag, User } from 'lucide-react';
-import type { AuthUser } from '@/services/auth.service';
+import type { AuthUser } from '@/types/user.type';
 import { useAuthStore } from '@/store/auth.store';
 
 export default function AccountDropdown({ user }: { user: AuthUser }) {
@@ -36,7 +36,7 @@ export default function AccountDropdown({ user }: { user: AuthUser }) {
     };
   }, [open]);
 
-  const itemClass = 'flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50 focus-visible:-outline-offset-2 dark:text-slate-200 dark:hover:bg-slate-800';
+  const itemClass = 'ui-menu-item flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700 focus-visible:-outline-offset-2';
 
   return (
     <div
@@ -60,19 +60,19 @@ export default function AccountDropdown({ user }: { user: AuthUser }) {
         <ChevronDown aria-hidden="true" className={`hidden h-4 w-4 transition-transform motion-reduce:transition-none lg:block ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div id={panelId} className="absolute right-0 top-full z-50 mt-2 w-[260px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-lg shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/20">
-          <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-700">
-            <p className="break-words text-sm font-semibold text-slate-900 dark:text-white">{user.fullName}</p>
-            <p className="mt-1 break-all text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+        <div id={panelId} className="absolute right-0 top-full z-50 mt-2 w-[260px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-lg shadow-slate-900/10">
+          <div className="border-b border-slate-100 px-4 py-3">
+            <p className="break-words text-sm font-semibold text-slate-900">{user.fullName}</p>
+            <p className="mt-1 break-all text-xs text-slate-500">{user.email}</p>
           </div>
-          <nav aria-label="Menu tài khoản" className="divide-y divide-slate-100 dark:divide-slate-700">
-            <Link href="/account" onClick={() => setOpen(false)} className={itemClass}>
+          <nav aria-label="Menu tài khoản" className="divide-y divide-slate-100">
+            <Link href="/customer/profile" onClick={() => setOpen(false)} className={itemClass}>
               <User className="h-4 w-4" aria-hidden="true" /> Tài khoản của tôi
             </Link>
-            <Link href="/orders" onClick={() => setOpen(false)} className={itemClass}>
+            <Link href="/customer/profile/orders" onClick={() => setOpen(false)} className={itemClass}>
               <ShoppingBag className="h-4 w-4" aria-hidden="true" /> Đơn hàng của tôi
             </Link>
-            <button type="button" onClick={() => { setOpen(false); logout(); }} className={`${itemClass} hover:text-red-600 dark:hover:text-red-400`}>
+            <button type="button" onClick={() => { setOpen(false); logout(); }} className={`${itemClass} hover:text-red-600`}>
               <LogOut className="h-4 w-4" aria-hidden="true" /> Đăng xuất
             </button>
           </nav>

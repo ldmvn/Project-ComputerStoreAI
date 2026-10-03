@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import ThemeInitializer from '@/components/layout/ThemeInitializer';
-import { themeInitScript } from '@/lib/theme';
+import '@/styles/interactions.css';
 
 export const metadata: Metadata = {
   title: 'DUCMANH PC',
   description: 'Cửa hàng PC & Laptop chính hãng',
+  icons: { icon: '/logo.png' },
 };
 
 export default function RootLayout({
@@ -14,12 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
+    <html lang="vi">
       <body className="min-h-screen antialiased">
-        <ThemeInitializer />
         {children}
       </body>
     </html>

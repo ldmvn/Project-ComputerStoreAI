@@ -1,0 +1,46 @@
+.slide {
+  animation: reveal 350ms ease-out both;
+}
+.arrow {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ui-icon-duration) var(--ui-ease),
+    translate var(--ui-duration) var(--ui-ease),
+    scale var(--ui-duration) var(--ui-ease),
+    background-color var(--ui-duration) var(--ui-ease),
+    box-shadow var(--ui-duration) var(--ui-ease);
+}
+.arrow:active { translate: 0 0; scale: 0.98; }
+@media (hover: hover) and (pointer: fine) {
+  .arrow:hover { translate: 0 -1px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+  .arrow:hover:active { translate: 0 0; }
+}
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .touchSlider:hover .arrow,
+  .arrow:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+@keyframes reveal {
+  from { opacity: 0.2; transform: scale(1.015); }
+  to { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide { animation: none; }
+  .arrow { transition: none; }
+  .arrow:hover, .arrow:active { translate: none; scale: none; }
+}
+
+@media (max-width: 1023px) {
+  .touchSlider { touch-action: pan-y pinch-zoom; }
+  .arrow { display: none; }
+  .pagination { bottom: 6px; padding: 0 4px; gap: 0; }
+  .dotButton { height: 24px; width: 24px; }
+}
+
+.compact .arrow { height: 24px; width: 24px; }
+.compact .arrow svg { height: 14px; width: 14px; }
+.compact .pagination { bottom: 4px; padding: 0 2px; gap: 0; }
+.compact .dotButton span { height: 4px; width: 4px; }
+.compact .dotButton[aria-current='true'] span { width: 12px; }

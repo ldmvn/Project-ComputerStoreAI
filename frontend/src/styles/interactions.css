@@ -1,0 +1,154 @@
+:root {
+  --ui-duration: 180ms;
+  --ui-icon-duration: 160ms;
+  --ui-image-duration: 220ms;
+  --ui-ease: ease;
+  --ui-card-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  --ui-soft-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Individual transforms preserve positioned controls and existing open states. */
+.ui-button,
+.ui-icon-link {
+  transition: translate var(--ui-duration) var(--ui-ease),
+    scale var(--ui-duration) var(--ui-ease),
+    box-shadow var(--ui-duration) var(--ui-ease),
+    background-color var(--ui-duration) var(--ui-ease),
+    border-color var(--ui-duration) var(--ui-ease),
+    color var(--ui-duration) var(--ui-ease);
+}
+
+.ui-banner,
+.ui-card {
+  transition: translate var(--ui-duration) var(--ui-ease),
+    box-shadow var(--ui-duration) var(--ui-ease),
+    border-color var(--ui-duration) var(--ui-ease);
+}
+
+.ui-modal {
+  transition: box-shadow var(--ui-duration) var(--ui-ease);
+}
+
+.header-action,
+.ui-header-action,
+.ui-menu-item,
+.ui-link {
+  transition: translate var(--ui-duration) var(--ui-ease),
+    opacity var(--ui-duration) var(--ui-ease),
+    background-color var(--ui-duration) var(--ui-ease),
+    color var(--ui-duration) var(--ui-ease);
+}
+
+:is(.header-action, .ui-header-action) > svg:first-child,
+.ui-avatar,
+.ui-search > svg,
+.ui-menu-item > svg:first-child,
+.ui-category-item > span:first-child > svg,
+.ui-category-item > svg:last-child,
+.ui-link > svg {
+  transition: translate var(--ui-icon-duration) var(--ui-ease),
+    scale var(--ui-icon-duration) var(--ui-ease),
+    color var(--ui-icon-duration) var(--ui-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-button:hover:not(:disabled):not([aria-disabled='true']) {
+    translate: 0 -1px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .ui-button--primary:hover:not(:disabled) { background-color: #c2410c; }
+  .ui-button--danger:hover:not(:disabled) { background-color: #b91c1c; }
+  .ui-button--neutral:hover:not(:disabled) { background-color: #f8fafc; }
+
+  :is(.ui-banner, .ui-card):hover {
+    translate: 0 -2px;
+    box-shadow: var(--ui-soft-shadow);
+  }
+
+  .ui-modal:hover {
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.16);
+  }
+
+  .site-header :is(.header-action, .ui-header-action):hover {
+    background-color: var(--header-hover);
+  }
+
+  :is(.header-action, .ui-header-action):hover > svg:first-child,
+  .ui-header-action:hover .ui-avatar,
+  .ui-search:hover > svg {
+    translate: 0 -2px;
+    scale: 1.05;
+  }
+
+  .ui-icon-link:hover {
+    translate: 0 -2px;
+    scale: 1.05;
+  }
+
+  .ui-menu-item:hover:not([aria-current='page']):not([data-active='true']) {
+    background-color: #fff7ed;
+    color: #c2410c;
+  }
+
+  .ui-menu-item:hover:not([aria-current='page']):not([data-active='true']) > svg:first-child {
+    translate: 2px 0;
+    color: #c2410c;
+  }
+
+  .ui-category-item:hover {
+    translate: 2px 0;
+  }
+
+  .ui-category-item:hover > span:first-child > svg {
+    translate: 0 -1px;
+  }
+
+  .ui-category-item:hover > svg:last-child:not(:first-child) { translate: 3px 0; }
+
+  .ui-link:hover {
+    color: #9a3412;
+  }
+
+  .ui-link:hover > svg {
+    translate: 3px 0;
+  }
+
+  .ui-link--back:hover > svg { translate: -3px 0; }
+}
+
+/* Tap feedback also works on touchscreens; disabled controls stay still. */
+.ui-button:active:not(:disabled):not([aria-disabled='true']),
+.ui-icon-link:active {
+  translate: 0 0;
+  scale: 0.98;
+  box-shadow: none;
+}
+
+:is(.header-action, .ui-header-action):active,
+.ui-menu-item:active {
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button,
+  .ui-icon-link,
+  .ui-banner,
+  .ui-card,
+  .ui-modal,
+  .header-action,
+  .ui-header-action,
+  .ui-menu-item,
+  .ui-link,
+  :is(.header-action, .ui-header-action) > svg:first-child,
+  .ui-avatar,
+  .ui-search > svg,
+  .ui-menu-item > svg,
+  .ui-category-item > span:first-child > svg,
+  .ui-category-item > svg:last-child,
+  .ui-link > svg {
+    transition: none;
+    translate: none !important;
+    scale: none !important;
+  }
+}

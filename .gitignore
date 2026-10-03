@@ -1,5 +1,6 @@
 # Dependencies (all workspaces)
 node_modules/
+backend/uploads/
 
 # Next.js and generated build/cache output
 .next/

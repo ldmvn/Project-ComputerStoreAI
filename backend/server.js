@@ -9,6 +9,12 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './src/routes/v1/auth.route.js';
+import { publicBannerRouter, adminBannerRouter } from './src/routes/v1/banner.route.js';
+import { publicProductSectionRouter, adminProductSectionRouter } from './src/routes/v1/productSection.route.js';
+import { publicProductRouter, adminProductRouter } from './src/routes/v1/productCatalog.route.js';
+import { publicCategoryRouter, adminCategoryRouter } from './src/routes/v1/category.route.js';
+import { bannerMediaDirectory } from './src/services/media.service.js';
+import { productMediaDirectory } from './src/services/productMedia.service.js';
 
 // ---------------------------------------------------------------------------
 // App instance
@@ -47,6 +53,7 @@ app.use((req, _res, next) => {
 app.get('/api/health', (_req, res) => {
   res.status(200).json({
     status: 'ok',
+    service: 'computerstoreai-backend',
     message: 'Backend is running!',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
@@ -54,6 +61,26 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/categories', publicCategoryRouter);
+app.use('/api/admin/categories', adminCategoryRouter);
+app.use('/api/banners', publicBannerRouter);
+app.use('/api/admin/banners', adminBannerRouter);
+app.use('/api/product-sections', publicProductSectionRouter);
+app.use('/api/admin/product-sections', adminProductSectionRouter);
+app.use('/api/products', publicProductRouter);
+app.use('/api/admin/products', adminProductRouter);
+app.use('/media/banners', express.static(bannerMediaDirectory, {
+  dotfiles: 'deny',
+  immutable: true,
+  maxAge: '1y',
+  setHeaders: res => res.set('X-Content-Type-Options', 'nosniff'),
+}));
+app.use('/media/products', express.static(productMediaDirectory, {
+  dotfiles: 'deny',
+  immutable: true,
+  maxAge: '1y',
+  setHeaders: res => res.set('X-Content-Type-Options', 'nosniff'),
+}));
 
 // ---------------------------------------------------------------------------
 // 404 fallback
@@ -67,6 +94,8 @@ app.use((req, res) => {
 });
 
 app.use((error, _req, res, _next) => {
+  if (error?.code === 'P2025') return res.status(404).json({ success: false, message: 'Banner không tồn tại.' });
+  if (error?.code === 'P2034') return res.status(409).json({ success: false, message: 'Dữ liệu vừa thay đổi. Vui lòng tải lại và thử lại.' });
   if (error?.statusCode) {
     return res.status(error.statusCode).json({
       success: false,

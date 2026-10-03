@@ -1,0 +1,59 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'main';
+  gap: 12px;
+  align-items: stretch;
+}
+.mainColumn { grid-area: main; display: grid; min-width: 0; gap: 12px; }
+.hero { width: 100%; justify-self: center; aspect-ratio: 2 / 1; }
+.bottomRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+.bottomSlot { aspect-ratio: 8 / 3; }
+.singleBottom { grid-template-columns: minmax(0, 1fr); }
+.singleBottom .bottomSlot { aspect-ratio: 16 / 3; }
+.left { grid-area: left; min-height: 0; }
+.sideColumn {
+  grid-area: right;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+.sideSlot { min-height: 0; }
+@media (max-width: 768px) {
+  .left, .sideColumn, .bottomRow { display: none; }
+}
+@media (min-width: 769px) {
+  .hero { aspect-ratio: 16 / 7; }
+  .hasLeft {
+    grid-template-columns: minmax(0, 19fr) minmax(0, 81fr);
+    grid-template-areas: 'left main';
+  }
+  .hasRight {
+    grid-template-columns: minmax(0, 73fr) minmax(0, 27fr);
+    grid-template-areas: 'main right';
+  }
+  .hasLeft.hasRight {
+    grid-template-columns: minmax(0, 19fr) minmax(0, 54fr) minmax(0, 27fr);
+    grid-template-areas: 'left main right';
+  }
+}
+@media (min-width: 1024px) {
+  .hero { aspect-ratio: 16 / 7; max-height: 440px; }
+  .layout, .mainColumn, .sideColumn { gap: 16px; }
+  .hasLeft.hasRight {
+    grid-template-columns: minmax(0, 18fr) minmax(0, 59fr) minmax(0, 23fr);
+  }
+  .hasLeft.hasRight .bottomRow {
+    width: 100%;
+    justify-self: start;
+  }
+  .bottomSlot { aspect-ratio: 8 / 3.5; }
+  .singleBottom .bottomSlot { aspect-ratio: 16 / 3.5; }
+}

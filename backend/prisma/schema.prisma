@@ -8,9 +8,107 @@ generator client {
 }
 
 model Product {
-  id    Int    @id @default(autoincrement())
-  name  String
-  price Int
+  id                 Int                  @id @default(autoincrement())
+  name               String               @db.VarChar(191)
+  slug               String               @unique @db.VarChar(191)
+  sku                String               @unique @db.VarChar(100)
+  category           String?              @db.VarChar(100)
+  categoryId         Int?
+  brand              String?              @db.VarChar(100)
+  shortDescription   String?              @db.VarChar(500)
+  description        String?              @db.Text
+  price              Int
+  originalPrice      Int?
+  costPrice          Int?
+  stockQuantity      Int                  @default(0)
+  lowStockThreshold  Int                  @default(5)
+  isActive           Boolean              @default(true)
+  isDeleted          Boolean              @default(false)
+  deletedAt          DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  sectionItems       ProductSectionItem[]
+  images             ProductImage[]
+  specifications     ProductSpecification[]
+  categoryRecord     Category?             @relation("ProductCategory", fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([isActive, isDeleted, stockQuantity])
+  @@index([category])
+  @@index([categoryId])
+  @@index([updatedAt])
+}
+
+model Category {
+  id          Int        @id @default(autoincrement())
+  name        String     @db.VarChar(191)
+  slug        String     @unique @db.VarChar(191)
+  description String?    @db.Text
+  icon        String?    @db.VarChar(64)
+  parentId    Int?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Category[] @relation("CategoryTree")
+  products    Product[]  @relation("ProductCategory")
+
+  @@index([parentId, sortOrder])
+  @@index([isActive, sortOrder])
+}
+
+model ProductImage {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  imageUrl  String   @db.VarChar(1000)
+  altText   String   @default("") @db.VarChar(300)
+  sortOrder Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+model ProductSpecification {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  name      String   @db.VarChar(100)
+  value     String   @db.VarChar(500)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+model ProductSection {
+  id         Int                  @id @default(autoincrement())
+  name       String
+  slug       String               @unique
+  subtitle   String?
+  viewAllUrl String?
+  sortOrder  Int                  @default(0)
+  isActive   Boolean              @default(true)
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  items      ProductSectionItem[]
+}
+
+model ProductSectionItem {
+  id        Int            @id @default(autoincrement())
+  sectionId Int
+  productId Int
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+
+  section ProductSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, productId])
+  @@index([sectionId, sortOrder])
 }
 
 model User {
@@ -23,4 +121,44 @@ model User {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+enum BannerGroup {
+  MAIN
+  SIDE
+}
+
+enum BannerPosition {
+  SIDE_LEFT
+  MAIN_HERO
+  BOTTOM_LEFT
+  BOTTOM_RIGHT
+  SIDE_RIGHT_TOP
+  SIDE_RIGHT_MIDDLE
+  SIDE_RIGHT_BOTTOM
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model Banner {
+  id               Int            @id @default(autoincrement())
+  name             String         @db.VarChar(150)
+  group            BannerGroup
+  position         BannerPosition
+  mediaType        MediaType
+  mediaUrl         String         @db.VarChar(1000)
+  mediaKey         String         @db.VarChar(100)
+  targetUrl        String?        @db.VarChar(1000)
+  altText          String         @default("") @db.VarChar(300)
+  sortOrder        Int            @default(0)
+  autoplayInterval Int            @default(4500)
+  isActive         Boolean        @default(true)
+  isAutoPlaced     Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([position, isActive, sortOrder])
 }

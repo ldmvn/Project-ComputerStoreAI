@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { getCurrentUser, type AuthUser } from '@/services/auth.service';
+import { getCurrentUser } from '@/services/auth.service';
+import type { AuthUser } from '@/types/user.type';
 
 type AuthState = {
   user: AuthUser | null;

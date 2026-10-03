@@ -144,14 +144,14 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         aria-modal="true"
         aria-labelledby="auth-modal-title"
         onMouseDown={(event) => event.stopPropagation()}
-        className={`relative grid max-h-[calc(100vh-2rem)] w-full max-w-[980px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)] transition duration-200 dark:border-slate-700 dark:bg-slate-900 md:grid-cols-[0.9fr_1.1fr] ${
+        className={`relative grid max-h-[calc(100vh-2rem)] w-full max-w-[980px] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(0,0,0,0.18)] transition duration-200 md:grid-cols-[0.9fr_1.1fr] ${
           isVisible ? 'scale-100 opacity-100' : 'scale-[0.97] opacity-0'
         }`}
       >
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 z-10 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          className="ui-button absolute right-4 top-4 z-10 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           aria-label="Đóng cửa sổ đăng nhập"
         >
           <X className="h-5 w-5" />
@@ -181,17 +181,17 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         <div className="p-6 sm:p-10">
           <div className="mx-auto max-w-md text-center">
-            <h1 id="auth-modal-title" className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 id="auth-modal-title" className="text-3xl font-bold tracking-tight text-slate-900">
               {authMode === 'login' ? 'Đăng nhập' : 'Đăng ký'}
             </h1>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-sm text-slate-500">
               {authMode === 'login' ? 'Nhập thông tin để truy cập tài khoản' : 'Tạo tài khoản DUCMANH PC để bắt đầu mua sắm'}
             </p>
           </div>
 
           {authMode === 'login' ? <form onSubmit={handleSubmit} noValidate className="mx-auto mt-6 max-w-md space-y-5">
             <div>
-              <label htmlFor="modal-login-email" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <label htmlFor="modal-login-email" className="mb-2 block text-sm font-semibold text-slate-700">
                 Email hoặc số điện thoại *
               </label>
               <div className="relative">
@@ -203,13 +203,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Email hoặc số điện thoại"
                   autoComplete="username"
-                  className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="modal-login-password" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <label htmlFor="modal-login-password" className="mb-2 block text-sm font-semibold text-slate-700">
                 Mật khẩu *
               </label>
               <div className="relative">
@@ -221,81 +221,81 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Nhập mật khẩu"
                   autoComplete="current-password"
-                  className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
                 />
-                <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="ui-button absolute right-2 top-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 text-sm">
-              <label className="flex cursor-pointer items-center gap-2 text-slate-600 dark:text-slate-300">
+              <label className="flex cursor-pointer items-center gap-2 text-slate-600">
                 <input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
                 Ghi nhớ đăng nhập
               </label>
-              <button type="button" onClick={() => handlePendingAction('Quên mật khẩu')} className="shrink-0 font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
+              <button type="button" onClick={() => handlePendingAction('Quên mật khẩu')} className="ui-link shrink-0 font-medium text-primary-600 hover:text-primary-700">
                 Quên mật khẩu?
               </button>
             </div>
 
-            {message && <p role="alert" className="rounded-lg bg-slate-100 px-3 py-2.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">{message}</p>}
+            {message && <p role="alert" className="rounded-lg bg-slate-100 px-3 py-2.5 text-sm text-slate-600">{message}</p>}
 
-            <button type="submit" disabled={isLoggingIn} className="h-12 w-full rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-sm font-semibold text-white transition hover:from-primary-700 hover:to-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-60">
+            <button type="submit" disabled={isLoggingIn} className="ui-button h-12 w-full rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-sm font-semibold text-white transition hover:from-primary-700 hover:to-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-60">
               {isLoggingIn ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
-            <button type="button" onClick={() => handlePendingAction('Đăng nhập bằng OTP')} className="h-12 w-full rounded-xl border border-primary-200 bg-white text-sm font-semibold text-primary-600 transition hover:bg-primary-50 dark:border-primary-800 dark:bg-slate-900 dark:text-primary-400 dark:hover:bg-primary-950/30">
+            <button type="button" onClick={() => handlePendingAction('Đăng nhập bằng OTP')} className="ui-button ui-button--neutral h-12 w-full rounded-xl border border-primary-200 bg-white text-sm font-semibold text-primary-600 transition hover:bg-primary-50">
               Đăng nhập bằng OTP
             </button>
 
             <div className="flex items-center gap-3 text-xs text-slate-400">
-              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              <span className="h-px flex-1 bg-slate-200" />
               Hoặc đăng nhập với
-              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              <span className="h-px flex-1 bg-slate-200" />
             </div>
 
-            <button type="button" onClick={() => handlePendingAction('Google Login')} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+            <button type="button" onClick={() => handlePendingAction('Google Login')} className="ui-button ui-button--neutral flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
               <span className="text-lg font-bold text-[#4285F4]">G</span>
               Google
             </button>
           </form> : <form onSubmit={handleRegisterSubmit} noValidate className="mx-auto mt-6 max-h-[calc(100vh-12rem)] max-w-md space-y-4 overflow-y-auto pr-1">
             <div>
-              <label htmlFor="modal-register-name" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Họ và tên *</label>
-              <div className="relative"><UserRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Nhập họ và tên" autoComplete="name" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></div>
+              <label htmlFor="modal-register-name" className="mb-2 block text-sm font-semibold text-slate-700">Họ và tên *</label>
+              <div className="relative"><UserRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Nhập họ và tên" autoComplete="name" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20" /></div>
               {registerErrors.fullName && <p className="mt-1 text-sm text-red-600" role="alert">{registerErrors.fullName}</p>}
             </div>
             <div>
-              <label htmlFor="modal-register-email" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Email *</label>
-              <div className="relative"><Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@gmail.com" autoComplete="email" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></div>
+              <label htmlFor="modal-register-email" className="mb-2 block text-sm font-semibold text-slate-700">Email *</label>
+              <div className="relative"><Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="example@gmail.com" autoComplete="email" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20" /></div>
               {registerErrors.email && <p className="mt-1 text-sm text-red-600" role="alert">{registerErrors.email}</p>}
             </div>
             <div>
-              <label htmlFor="modal-register-phone" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Số điện thoại *</label>
-              <div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-phone" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Nhập số điện thoại" autoComplete="tel" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /></div>
+              <label htmlFor="modal-register-phone" className="mb-2 block text-sm font-semibold text-slate-700">Số điện thoại *</label>
+              <div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-phone" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Nhập số điện thoại" autoComplete="tel" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20" /></div>
               {registerErrors.phone && <p className="mt-1 text-sm text-red-600" role="alert">{registerErrors.phone}</p>}
             </div>
             <div>
-              <label htmlFor="modal-register-password" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Mật khẩu *</label>
-              <div className="relative"><LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Nhập mật khẩu" autoComplete="new-password" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
+              <label htmlFor="modal-register-password" className="mb-2 block text-sm font-semibold text-slate-700">Mật khẩu *</label>
+              <div className="relative"><LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Nhập mật khẩu" autoComplete="new-password" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="ui-button absolute right-2 top-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
               {registerErrors.password && <p className="mt-1 text-sm text-red-600" role="alert">{registerErrors.password}</p>}
             </div>
             <div>
-              <label htmlFor="modal-register-confirm-password" className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">Xác nhận mật khẩu *</label>
-              <div className="relative"><LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Nhập lại mật khẩu" autoComplete="new-password" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white" /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute right-2 top-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200" aria-label={showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}>{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
+              <label htmlFor="modal-register-confirm-password" className="mb-2 block text-sm font-semibold text-slate-700">Xác nhận mật khẩu *</label>
+              <div className="relative"><LockKeyhole className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input id="modal-register-confirm-password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Nhập lại mật khẩu" autoComplete="new-password" className="h-[52px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20" /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="ui-button absolute right-2 top-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label={showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}>{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
               {registerErrors.confirmPassword && <p className="mt-1 text-sm text-red-600" role="alert">{registerErrors.confirmPassword}</p>}
             </div>
             <div>
-              <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-600 dark:text-slate-300"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" /><span>Tôi đồng ý với <span className="font-medium text-primary-600 dark:text-primary-400">Điều khoản sử dụng</span> và <span className="font-medium text-primary-600 dark:text-primary-400">Chính sách bảo mật</span></span></label>
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-600"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" /><span>Tôi đồng ý với <span className="font-medium text-primary-600">Điều khoản sử dụng</span> và <span className="font-medium text-primary-600">Chính sách bảo mật</span></span></label>
               {registerErrors.terms && <p className="mt-1 text-sm text-red-600" role="alert">{registerErrors.terms}</p>}
             </div>
-            {message && <p role="alert" className="rounded-lg bg-slate-100 px-3 py-2.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">{message}</p>}
-            <button type="submit" disabled={isRegistering} className="h-12 w-full rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-sm font-semibold text-white transition hover:from-primary-700 hover:to-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-60">{isRegistering ? 'Đang đăng ký...' : 'Đăng ký'}</button>
-            <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />Hoặc đăng ký với<span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" /></div>
-            <button type="button" onClick={() => handlePendingAction('Google Register')} className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"><span className="text-lg font-bold text-[#4285F4]">G</span>Google</button>
+            {message && <p role="alert" className="rounded-lg bg-slate-100 px-3 py-2.5 text-sm text-slate-600">{message}</p>}
+            <button type="submit" disabled={isRegistering} className="ui-button h-12 w-full rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-sm font-semibold text-white transition hover:from-primary-700 hover:to-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:cursor-not-allowed disabled:opacity-60">{isRegistering ? 'Đang đăng ký...' : 'Đăng ký'}</button>
+            <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />Hoặc đăng ký với<span className="h-px flex-1 bg-slate-200" /></div>
+            <button type="button" onClick={() => handlePendingAction('Google Register')} className="ui-button ui-button--neutral flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><span className="text-lg font-bold text-[#4285F4]">G</span>Google</button>
           </form>}
 
-          <p className="mx-auto mt-7 max-w-md text-center text-sm text-slate-500 dark:text-slate-400">
-            {authMode === 'login' ? <>Chưa có tài khoản?{' '}<button type="button" onClick={() => { setAuthMode('register'); setMessage(''); }} className="font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400">Đăng ký ngay</button></> : <>Đã có tài khoản?{' '}<button type="button" onClick={() => { setAuthMode('login'); setRegisterErrors({}); setMessage(''); }} className="font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400">Đăng nhập</button></>}
+          <p className="mx-auto mt-7 max-w-md text-center text-sm text-slate-500">
+            {authMode === 'login' ? <>Chưa có tài khoản?{' '}<button type="button" onClick={() => { setAuthMode('register'); setMessage(''); }} className="ui-link font-semibold text-primary-600 hover:text-primary-700">Đăng ký ngay</button></> : <>Đã có tài khoản?{' '}<button type="button" onClick={() => { setAuthMode('login'); setRegisterErrors({}); setMessage(''); }} className="ui-link font-semibold text-primary-600 hover:text-primary-700">Đăng nhập</button></>}
           </p>
         </div>
       </section>

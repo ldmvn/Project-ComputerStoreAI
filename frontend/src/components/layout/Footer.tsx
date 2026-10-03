@@ -64,9 +64,9 @@ export default function Footer() {
   };
 
   return (
-    <footer className="mt-auto border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950">
+    <footer className="mt-auto border-t border-slate-200 bg-slate-50">
       {/* ===== Trust Badges ===== */}
-      <div className="border-b border-slate-200 dark:border-slate-800">
+      <div className="border-b border-slate-200">
         <div className="container mx-auto px-4 py-8">
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
             {trustBadges.map((badge) => {
@@ -76,10 +76,10 @@ export default function Footer() {
                   key={badge.label}
                   className="flex items-center gap-3"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900/30">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  <span className="text-sm font-medium text-slate-700">
                     {badge.label}
                   </span>
                 </div>
@@ -104,23 +104,23 @@ export default function Footer() {
                 className="h-12 w-auto object-contain"
               />
             </Link>
-            <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mb-4 text-sm text-slate-600">
               Cửa hàng PC & Laptop chính hãng, uy tín hàng đầu Việt Nam. Hơn 10 năm kinh nghiệm trong lĩnh vực công nghệ.
             </p>
-            <ul className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+            <ul className="space-y-3 text-sm text-slate-600">
               <li className="flex items-start gap-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
                 <span> 5 Lê Duẩn, Phường Xuân Hòa, Tình Phú Thọ</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 shrink-0 text-primary-600" />
-                <a href="tel:19006868" className="hover:text-primary-600">
+                <a href="tel:19006868" className="ui-link hover:text-primary-600">
                   0386220065
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0 text-primary-600" />
-                <a href="luuducmanh.main@gmail.com" className="hover:text-primary-600">
+                <a href="luuducmanh.main@gmail.com" className="ui-link hover:text-primary-600">
                   luuducmanh.main@gmail.com
                 </a>
               </li>
@@ -130,28 +130,28 @@ export default function Footer() {
             <div className="mt-5 flex items-center gap-2">
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
+                className="ui-icon-link flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white"
                 aria-label="Facebook"
               >
                 <Facebook className="h-4 w-4" />
               </a>
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
+                className="ui-icon-link flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white"
                 aria-label="YouTube"
               >
                 <Youtube className="h-4 w-4" />
               </a>
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
+                className="ui-icon-link flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white"
                 aria-label="Instagram"
               >
                 <Instagram className="h-4 w-4" />
               </a>
               <a
                 href="#"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white dark:bg-slate-800 dark:text-slate-300"
+                className="ui-icon-link flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-primary-600 hover:text-white"
                 aria-label="Twitter"
               >
                 <Twitter className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default function Footer() {
 
           {/* === Cột 2: Giới thiệu === */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900 dark:text-white">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900">
               Giới thiệu
             </h3>
             <ul className="space-y-3">
@@ -169,7 +169,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-600 transition hover:text-primary-600 dark:text-slate-400"
+                    className="ui-link text-sm text-slate-600 transition hover:text-primary-600"
                   >
                     {link.label}
                   </Link>
@@ -180,7 +180,7 @@ export default function Footer() {
 
           {/* === Cột 3: Hỗ trợ khách hàng === */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900 dark:text-white">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900">
               Hỗ trợ khách hàng
             </h3>
             <ul className="space-y-3">
@@ -188,7 +188,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-600 transition hover:text-primary-600 dark:text-slate-400"
+                    className="ui-link text-sm text-slate-600 transition hover:text-primary-600"
                   >
                     {link.label}
                   </Link>
@@ -199,7 +199,7 @@ export default function Footer() {
 
           {/* === Cột 4: Chính sách === */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900 dark:text-white">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900">
               Chính sách chung
             </h3>
             <ul className="space-y-3">
@@ -207,7 +207,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-slate-600 transition hover:text-primary-600 dark:text-slate-400"
+                    className="ui-link text-sm text-slate-600 transition hover:text-primary-600"
                   >
                     {link.label}
                   </Link>
@@ -218,10 +218,10 @@ export default function Footer() {
 
           {/* === Cột 5: Newsletter === */}
           <div className="lg:col-span-1">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900 dark:text-white">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-900">
               Khuyến mãi & Tin tức
             </h3>
-            <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mb-4 text-sm text-slate-600">
               Đăng ký để nhận ngay <strong className="text-primary-600">voucher giảm 10%</strong> cho đơn hàng đầu tiên và cập nhật các chương trình khuyến mãi hấp dẫn.
             </p>
             <form onSubmit={handleSubscribe} className="flex flex-col gap-2">
@@ -233,18 +233,18 @@ export default function Footer() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email của bạn"
-                  className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder-slate-400"
+                  className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                 />
               </div>
               <button
                 type="submit"
-                className="flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700 active:scale-[0.98]"
+                className="ui-button ui-button--primary flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
               >
                 <Send className="h-4 w-4" />
                 Đăng ký ngay
               </button>
               {subscribed && (
-                <p className="text-xs text-green-600 dark:text-green-400">
+                <p className="text-xs text-green-600">
                   ✓ Đăng ký thành công! Kiểm tra email của bạn.
                 </p>
               )}
@@ -259,7 +259,7 @@ export default function Footer() {
                 {['VISA', 'Master', 'Momo', 'VNPay', 'COD'].map((method) => (
                   <span
                     key={method}
-                    className="inline-flex h-7 items-center rounded border border-slate-200 bg-white px-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    className="inline-flex h-7 items-center rounded border border-slate-200 bg-white px-2 text-xs font-medium text-slate-600"
                   >
                     {method}
                   </span>
@@ -271,10 +271,10 @@ export default function Footer() {
       </div>
 
       {/* ===== Copyright ===== */}
-      <div className="border-t border-slate-200 bg-white py-5 dark:border-slate-800 dark:bg-slate-900">
+      <div className="border-t border-slate-200 bg-white py-5">
         <div className="container mx-auto flex flex-col items-center justify-between gap-2 px-4 text-center text-xs text-slate-500 md:flex-row md:text-left">
           <p>
-            © 2026 <strong className="text-slate-700 dark:text-slate-300">DUCMANH PC</strong>.
+            © 2026 <strong className="text-slate-700">DUCMANH PC</strong>.
             ldm. All rights reserved.
           </p>
           <p>

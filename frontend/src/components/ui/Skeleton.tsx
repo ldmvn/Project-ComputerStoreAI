@@ -18,7 +18,7 @@ export function Skeleton({ className = '', width, height, style, ...props }: Ske
 
 export function ProductCardSkeleton() {
   return (
-    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <article className="overflow-hidden rounded-xl border border-slate-200 bg-white p-4">
       <Skeleton className="aspect-square w-full rounded-lg" />
       <div className="mt-4 space-y-3">
         <Skeleton className="h-4 w-11/12 rounded" />
@@ -62,7 +62,7 @@ export function ProductDetailSkeleton() {
         <Skeleton className="h-8 w-2/5 rounded" />
         <Skeleton className="h-4 w-full rounded" />
         <Skeleton className="h-4 w-11/12 rounded" />
-        <div className="space-y-3 border-y border-slate-200 py-5 dark:border-slate-800">
+        <div className="space-y-3 border-y border-slate-200 py-5">
           <Skeleton className="h-4 w-1/3 rounded" />
           <Skeleton className="h-4 w-2/3 rounded" />
           <Skeleton className="h-4 w-1/2 rounded" />
@@ -78,7 +78,7 @@ export function MegaMenuSkeleton() {
     <div
       aria-busy="true"
       aria-label="Đang tải danh mục"
-      className="grid min-h-[260px] w-[min(760px,calc(100vw-19.5rem))] grid-cols-2 gap-5 rounded-r-lg border-y border-r border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-950"
+      className="grid min-h-[260px] w-[min(760px,calc(100vw-19.5rem))] grid-cols-2 gap-5 rounded-r-lg border-y border-r border-slate-200 bg-white p-6"
     >
       {Array.from({ length: 8 }, (_, index) => (
         <div key={index} className="space-y-2">
@@ -94,7 +94,7 @@ export function CartSkeleton() {
   return (
     <div aria-busy="true" aria-label="Đang tải giỏ hàng" className="space-y-4">
       {Array.from({ length: 3 }, (_, index) => (
-        <div key={index} className="flex items-center gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
+        <div key={index} className="flex items-center gap-4 border-b border-slate-200 pb-4">
           <Skeleton className="h-20 w-20 shrink-0 rounded-lg" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4 rounded" />

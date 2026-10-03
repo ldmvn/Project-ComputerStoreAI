@@ -1,4 +1,3 @@
-// Uses the Playwright setup documented in tests/theme.cjs.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 
@@ -6,13 +5,13 @@ const assert = require('node:assert/strict');
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
     for (const role of ['USER', 'ADMIN']) {
-      const context = await browser.newContext({ colorScheme: 'light' });
+      const context = await browser.newContext();
       await context.addInitScript(() => sessionStorage.setItem('accessToken', 'test-token'));
       await context.route('**/auth/me', (route) => route.fulfill({ json: { user: { id: 1, fullName: 'Người dùng kiểm thử', email: 'account-test@example.com', role } } }));
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
-      await page.goto(`${process.env.THEME_TEST_URL || 'http://localhost:3100'}/home`);
+      await page.goto(`${process.env.TEST_URL || 'http://localhost:3100'}/`);
       const trigger = page.getByRole('button', { name: 'Tài khoản: Người dùng kiểm thử', exact: true });
       const menu = page.getByRole('navigation', { name: 'Menu tài khoản' });
       await trigger.click();
@@ -47,18 +46,15 @@ const assert = require('node:assert/strict');
       await trigger.click();
       const panel = menu.locator('..');
       assert.equal(await panel.evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)');
-      await page.getByRole('switch').click();
-      await trigger.click();
-      assert.equal(await panel.evaluate((el) => getComputedStyle(el).backgroundColor), 'rgb(15, 23, 42)');
       await page.evaluate(() => { window.accountNavigationMarker = true; });
       await menu.getByRole('link', { name: 'Tài khoản của tôi' }).click();
-      await page.waitForURL('**/account');
+      await page.waitForURL('**/customer/profile');
       await page.getByRole('heading', { name: 'Tài khoản của tôi' }).waitFor();
       assert.equal(await page.evaluate(() => window.accountNavigationMarker), true);
       assert.equal(await menu.count(), 0);
       await trigger.click();
       await menu.getByRole('link', { name: 'Đơn hàng của tôi' }).click();
-      await page.waitForURL('**/orders');
+      await page.waitForURL('**/customer/profile/orders');
       await page.getByRole('heading', { name: 'Đơn hàng của tôi' }).waitFor();
       await trigger.click();
       await menu.getByRole('button', { name: 'Đăng xuất' }).click();
@@ -69,7 +65,7 @@ const assert = require('node:assert/strict');
       await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
       await page.getByRole('dialog').waitFor();
       assert.deepEqual(errors, []);
-      console.log(`PASS ${role}: open/close, user data, outside click, Escape, keyboard, responsive, themes, navigation, logout, guest login`);
+      console.log(`PASS ${role}: open/close, user data, outside click, Escape, keyboard, responsive, navigation, logout, guest login`);
       await context.close();
     }
   } finally { await browser.close(); }

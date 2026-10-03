@@ -1,68 +1,65 @@
-// Run with the same Playwright setup as tests/theme.cjs, against a built site.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
-
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
-  const base = process.env.THEME_TEST_URL || 'http://localhost:3100';
+  const base = process.env.TEST_URL || 'http://localhost:3100';
   try {
     for (const role of [null, 'USER', 'ADMIN', 'EXPIRED']) {
       const context = await browser.newContext();
-      const user = { id: 1, fullName: 'Test Account', email: 'test@example.com', phone: '0123456789', role };
-      if (role) {
-        await context.addInitScript(() => {
-          localStorage.setItem('accessToken', 'test-token');
-          // A forged cached role must not grant access.
-          localStorage.setItem('authUser', JSON.stringify({ role: 'ADMIN' }));
-        });
-      }
-      await context.route('**/auth/me', async (route) => {
-        await route.fulfill({ status: role === 'EXPIRED' ? 401 : 200, json: { user } });
+      if (role) await context.addInitScript(() => {
+        localStorage.setItem('accessToken', 'test-token');
+        localStorage.setItem('authUser', JSON.stringify({ role: 'ADMIN' }));
       });
+      await context.route('**/auth/me', route => route.fulfill({ status: role === 'EXPIRED' ? 401 : 200, json: { user: { id: 1, fullName: 'Test Account', email: 'test@example.com', phone: '0123456789', role } } }));
       const page = await context.newPage();
       const errors = [];
-      page.on('pageerror', (error) => errors.push(error.message));
-      await page.goto(`${base}/dashboard`);
-      if (role !== 'ADMIN') {
-        await page.waitForURL('**/home');
-        assert.equal(await page.getByRole('heading', { name: 'Dashboard', exact: true }).count(), 0);
-        assert.equal(await page.getByRole('link', { name: 'Dashboard', exact: true }).count(), 0);
-        await page.setViewportSize({ width: 375, height: 812 });
-        await page.getByRole('button', { name: 'Toggle menu' }).click();
-        assert.equal(await page.getByRole('link', { name: 'Dashboard', exact: true }).count(), 0);
-      } else {
-        await page.getByRole('heading', { name: 'Dashboard', exact: true }).waitFor();
-        await page.reload();
-        await page.getByRole('heading', { name: 'Dashboard', exact: true }).waitFor();
-        await page.getByRole('link', { name: 'Về trang chủ' }).click();
-        await page.waitForURL('**/home');
-        // A client-side transition preserves this marker.
-        await page.evaluate(() => { window.dashboardNavigationMarker = true; });
-        await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
-        await page.waitForURL('**/dashboard');
-        assert.equal(await page.evaluate(() => window.dashboardNavigationMarker), true);
-        for (const width of [320, 375, 768, 1024, 1280, 1440]) {
-          await page.setViewportSize({ width, height: 900 });
-          const link = page.getByRole('link', { name: 'Dashboard', exact: true }).filter({ visible: true });
-          const box = await link.boundingBox();
-          assert.ok(box && box.x >= 0 && box.x + box.width <= width, `Dashboard fits ${width}px`);
-          await link.click();
-          const search = await page.locator('input[type="search"]').boundingBox();
-          assert.ok(search && search.width > 50 && search.x + search.width <= width, `Search remains usable at ${width}px`);
+      page.on('pageerror', error => errors.push(error.message));
+      for (const path of ['/admin/dashboard', '/admin/products', '/admin/orders', '/admin/settings/store']) {
+        await page.goto(base + path);
+        if (role !== 'ADMIN') {
+          await page.waitForURL(base + '/');
+          assert.equal(await page.getByRole('navigation', { name: 'Điều hướng quản trị' }).count(), 0);
+        } else {
+          await page.getByRole('navigation', { name: 'Điều hướng quản trị' }).waitFor();
+          await page.locator('main h1').waitFor();
         }
-        await page.getByRole('switch').click();
-        await page.waitForFunction(() => getComputedStyle(document.querySelector('header a[href="/dashboard"]')).color === 'rgb(203, 213, 225)');
-        assert.equal(await page.getByRole('link', { name: 'Dashboard', exact: true }).evaluate((el) => getComputedStyle(el).backgroundColor), 'rgba(0, 0, 0, 0)');
-        await page.getByRole('button', { name: 'Tài khoản: Test Account', exact: true }).click();
+      }
+      if (role === 'ADMIN') {
+        await page.goto(base + '/admin/dashboard');
+        for (const [width, expectedPadding] of [[375, 16], [768, 24], [1440, 32], [1920, 40]]) {
+          await page.setViewportSize({ width, height: 900 });
+          const layout = await page.locator('main').evaluate(main => {
+            const content = main.firstElementChild.getBoundingClientRect();
+            const style = getComputedStyle(main);
+            const bounds = main.getBoundingClientRect();
+            return { padding: parseFloat(style.paddingLeft), contentLeft: content.left, contentRight: content.right, mainLeft: bounds.left, mainRight: bounds.right, pageWidth: document.documentElement.scrollWidth };
+          });
+          assert.equal(layout.padding, expectedPadding, `${width}px main horizontal padding`);
+          assert.ok(Math.abs(layout.contentLeft - layout.mainLeft - expectedPadding) < 1, `${width}px content left inset`);
+          assert.ok(Math.abs(layout.mainRight - layout.contentRight - expectedPadding) < 1, `${width}px content uses full available width`);
+          assert.ok(layout.pageWidth <= width + 1, `${width}px no horizontal page scroll`);
+        }
+        await page.getByRole('button', { name: 'Thu gọn sidebar', exact: true }).click();
+        await page.getByRole('button', { name: 'Mở rộng sidebar', exact: true }).click();
+        await page.setViewportSize({ width: 375, height: 812 });
+        await page.getByRole('button', { name: 'Mở menu dashboard', exact: true }).click();
+        await page.getByRole('button', { name: 'Cửa hàng', exact: true }).click();
+        await page.getByRole('link', { name: 'Sản phẩm', exact: true }).click();
+        await page.waitForURL(base + '/admin/products');
+        await page.getByRole('link', { name: 'Về trang chủ' }).click();
+        await page.waitForURL(base + '/');
+        await page.getByRole('button', { name: 'Tài khoản: Test Account' }).click();
         await page.getByRole('button', { name: 'Đăng xuất' }).click();
-        await page.waitForURL('**/home');
-        assert.equal(await page.getByRole('link', { name: 'Dashboard', exact: true }).count(), 0);
+        // The init script seeds every document; disable it by rejecting the
+        // synthetic token on the following full navigation.
+        await context.unroute('**/auth/me');
+        await context.route('**/auth/me', route => route.fulfill({ status: 401, json: { message: 'Expired' } }));
+        await page.goto(base + '/admin/orders');
+        await page.waitForURL(base + '/');
       }
       assert.deepEqual(errors, []);
-      console.log(`PASS: ${role || 'guest'} access and navigation`);
+      console.log(`PASS ${role || 'guest'}: admin routes and access protection`);
       await context.close();
     }
-  } finally {
-    await browser.close();
-  }
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,4 +1,3 @@
-// Uses the Playwright setup documented in tests/theme.cjs.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const assert = require('node:assert/strict');
 
@@ -6,21 +5,20 @@ const assert = require('node:assert/strict');
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
     for (const role of [null, 'USER', 'ADMIN']) {
-      const context = await browser.newContext({ colorScheme: 'light' });
+      const context = await browser.newContext();
       if (role) {
         await context.addInitScript(() => sessionStorage.setItem('accessToken', 'test-token'));
         await context.route('**/auth/me', (route) => route.fulfill({ json: { user: { id: 1, fullName: 'Người dùng có tên rất dài để kiểm tra responsive', email: 'responsive@example.com', role } } }));
       }
       const page = await context.newPage();
-      await page.goto(`${process.env.THEME_TEST_URL || 'http://localhost:3100'}/home`);
+      await page.goto(`${process.env.TEST_URL || 'http://localhost:3100'}/`);
       const header = page.locator('header');
       const account = header.getByRole('button', { name: role ? /^Tài khoản:/ : 'Đăng nhập', exact: !role });
       await account.waitFor();
       for (const width of [320, 360, 430, 640, 768, 1024, 1366, 1920]) {
         await page.setViewportSize({ width, height: 960 });
-        for (const dark of [false, true]) {
-          if (dark) await header.getByRole('switch').click();
-          const actions = [header.getByRole('switch'), header.getByRole('link', { name: 'Yêu thích', exact: true }), header.getByRole('link', { name: 'Giỏ hàng', exact: true })];
+        {
+          const actions = [header.getByRole('link', { name: 'Yêu thích', exact: true }), header.getByRole('link', { name: 'Giỏ hàng', exact: true })];
           assert.equal(await header.getByRole('link', { name: 'Dashboard', exact: true }).count(), role === 'ADMIN' ? 1 : 0);
           if (role === 'ADMIN') actions.push(header.getByRole('link', { name: 'Dashboard', exact: true }));
           actions.push(account);
@@ -48,10 +46,9 @@ const assert = require('node:assert/strict');
             assert.ok(panel.x >= 0 && panel.x + panel.width <= width, 'Account dropdown fits');
             await page.keyboard.press('Escape');
           }
-          if (dark) await header.getByRole('switch').click();
         }
       }
-      console.log(`PASS ${role || 'guest'}: 320–1920px, light/dark, visible actions, search rows, no overlap, dropdown bounds`);
+      console.log(`PASS ${role || 'guest'}: 320–1920px, visible actions, search rows, no overlap, dropdown bounds`);
       await context.close();
     }
   } finally { await browser.close(); }
