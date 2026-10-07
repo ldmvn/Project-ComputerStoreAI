@@ -2,6 +2,25 @@ import type { AuthUser } from '@/types/user.type';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
+async function passwordResetRequest<T>(path: string, payload: Record<string, string>): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/${path}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload), cache: 'no-store', signal: AbortSignal.timeout(30000),
+    });
+  } catch {
+    throw new AuthRequestError('Không thể kết nối máy chủ. Vui lòng thử lại sau.');
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new AuthRequestError(data.message || 'Không thể xử lý yêu cầu.', data.field, data.errors);
+  return data as T;
+}
+
+export const requestPasswordReset = (email: string) => passwordResetRequest<{ message: string; challengeId: string; expiresIn: number; expiresAt?: string; serverTime?: string; resendAfter: number }>('forgot-password', { email });
+export const verifyResetOtp = (email: string, challengeId: string, otp: string) => passwordResetRequest<{ resetToken: string; expiresIn: number }>('verify-reset-otp', { email, challengeId, otp });
+export const completePasswordReset = (email: string, resetToken: string, password: string, confirmPassword: string) => passwordResetRequest<{ message: string }>('reset-password', { email, resetToken, password, confirmPassword });
+
 type RegisterPayload = {
   fullName: string;
   email: string;

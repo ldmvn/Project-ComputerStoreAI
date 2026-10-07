@@ -54,21 +54,22 @@ export function ProductDetailSkeleton() {
     <div
       aria-busy="true"
       aria-label="Đang tải chi tiết sản phẩm"
-      className="grid gap-8 lg:grid-cols-2"
+      role="status"
+      className="space-y-6"
     >
-      <Skeleton className="aspect-square w-full rounded-2xl" />
-      <div className="space-y-5 py-2">
-        <Skeleton className="h-8 w-5/6 rounded" />
-        <Skeleton className="h-8 w-2/5 rounded" />
-        <Skeleton className="h-4 w-full rounded" />
-        <Skeleton className="h-4 w-11/12 rounded" />
-        <div className="space-y-3 border-y border-slate-200 py-5">
-          <Skeleton className="h-4 w-1/3 rounded" />
-          <Skeleton className="h-4 w-2/3 rounded" />
-          <Skeleton className="h-4 w-1/2 rounded" />
+      <Skeleton className="h-5 w-3/4 max-w-lg rounded" />
+      <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-8">
+        <div className="min-w-0"><Skeleton className="aspect-square w-full rounded-2xl" /><div className="mt-3 flex gap-3">{[0, 1, 2].map(index => <Skeleton key={index} className="h-20 w-20 shrink-0 rounded-xl" />)}</div></div>
+        <div className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <Skeleton className="h-16 w-full rounded" />
+          <Skeleton className="h-4 w-2/5 rounded" />
+          <div className="space-y-4 border-y border-slate-200 py-4"><Skeleton className="h-5 w-2/3 rounded" /><Skeleton className="h-5 w-1/2 rounded" /><Skeleton className="h-5 w-1/3 rounded" /></div>
+          <Skeleton className="h-12 w-1/2 rounded" />
+          <div className="grid gap-3 sm:grid-cols-2"><Skeleton className="h-12 w-full rounded-xl" /><Skeleton className="h-12 w-full rounded-xl" /></div>
+          <div className="space-y-3 rounded-xl bg-slate-50 p-5"><Skeleton className="h-5 w-1/2 rounded" />{[0, 1, 2, 3, 4, 5].map(index => <Skeleton key={index} className="h-5 w-full rounded" />)}</div>
         </div>
-        <Skeleton className="h-12 w-full rounded-xl" />
       </div>
+      <div className="grid gap-6 lg:grid-cols-2"><Skeleton className="h-64 w-full rounded-2xl" /><Skeleton className="h-64 w-full rounded-2xl" /></div>
     </div>
   );
 }

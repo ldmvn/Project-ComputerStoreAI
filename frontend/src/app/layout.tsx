@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { ToastProvider } from '@/components/ui/Toast';
+import { ConfirmProvider } from '@/components/ui/ConfirmDialog';
 import './globals.css';
 import '@/styles/interactions.css';
 
@@ -16,7 +18,9 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="min-h-screen antialiased">
-        {children}
+        <ToastProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </ToastProvider>
       </body>
     </html>
   );

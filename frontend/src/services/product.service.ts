@@ -1,7 +1,7 @@
-import type { Product, ProductListResponse } from '@/types/product.type';
+import type { Product, ProductListResponse, ProductStatistics } from '@/types/product.type';
 import { apiRequest } from './http.client';
 
-export type ProductListQuery = { page?: number; limit?: number; search?: string; category?: string; status?: string; stock?: string; sort?: string };
+export type ProductListQuery = { page?: number; limit?: number; search?: string; category?: string; brand?: string; brandId?: number; minPrice?: number; maxPrice?: number; attribute?: string; attributeValue?: string; status?: string; stock?: string; sort?: string };
 
 function queryString(query: ProductListQuery) {
   const params = new URLSearchParams();
@@ -10,6 +10,9 @@ function queryString(query: ProductListQuery) {
 }
 
 export const getAdminProducts = (token: string, query: ProductListQuery = {}, signal?: AbortSignal) => apiRequest<ProductListResponse>(`/admin/products?${queryString(query)}`, { signal }, token);
+export const getPublicProducts = (query: ProductListQuery = {}, signal?: AbortSignal) => apiRequest<Pick<ProductListResponse, 'products' | 'meta' | 'filters'>>(`/products?${queryString(query)}`, { signal });
+export const getPublicProduct = (slug: string, signal?: AbortSignal) => apiRequest<{ product: Product & ProductStatistics }>(`/products/${encodeURIComponent(slug)}`, { signal });
+export const recordProductView = (slug: string, viewId: string, signal?: AbortSignal) => apiRequest<{ viewCount: number }>(`/products/${encodeURIComponent(slug)}/views`, { method: 'POST', body: JSON.stringify({ viewId }), signal });
 export const getAdminProduct = (token: string, id: number, signal?: AbortSignal) => apiRequest<{ product: Product }>(`/admin/products/${id}`, { signal }, token);
 export const getProductCategories = (token: string, signal?: AbortSignal) => apiRequest<{ categories: string[] }>('/admin/products/categories', { signal }, token);
 export const createProduct = (token: string, body: FormData) => apiRequest<{ product: Product; message: string }>('/admin/products', { method: 'POST', body }, token);

@@ -6,6 +6,13 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
+    "test:product-detail": "node tests/productDetail.integration.mjs",
+    "test:brand-filter": "node tests/brandFilter.integration.mjs",
+    "brands:normalize-slugs": "node scripts/normalize-brand-slugs.mjs",
+    "test:mega-menu": "node --test tests/unit/megaMenu.validator.test.mjs && node tests/megaMenu.integration.mjs",
+    "test:google-auth": "node tests/googleAuth.integration.mjs",
+    "test:password-reset": "node tests/passwordReset.integration.mjs && node --test tests/passwordReset.lifecycle.mjs tests/unit/smtpEnv.test.mjs",
+    "test:password-reset:gmail": "node tests/gmailReset.integration.mjs",
     "dev": "nodemon server.js",
     "start": "node server.js",
     "prisma:generate": "prisma generate",
@@ -13,6 +20,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "test:banners": "node tests/banner.integration.mjs",
     "test:categories": "node --test tests/unit/category.validator.test.mjs",
+    "test:brands": "node --test tests/unit/brand.validator.test.mjs",
     "test:categories:integration": "node tests/category.integration.mjs",
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed.js"
@@ -24,8 +32,10 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "file-type": "^20.5.0",
+    "google-auth-library": "^11.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
+    "nodemailer": "^10.0.15",
     "sharp": "^0.34.5"
   },
   "devDependencies": {

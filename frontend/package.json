@@ -4,6 +4,11 @@
   "private": true,
   "description": "Frontend for ComputerStoreAI - E-commerce platform for PCs and Laptops",
   "scripts": {
+    "test:product-detail": "node tests/product-detail.cjs",
+    "test:brand-filter": "node tests/brand-filter.cjs",
+    "test:mega-menu": "node tests/mega-menu.cjs",
+    "test:google-auth": "node tests/google-auth.cjs",
+    "test:password-reset": "node tests/password-reset.cjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

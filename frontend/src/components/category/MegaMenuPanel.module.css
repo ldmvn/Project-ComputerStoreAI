@@ -1,0 +1,2 @@
+.group { grid-column: span var(--compact-span); }
+@media (min-width: 1280px) { .group { grid-column: span var(--span); } }

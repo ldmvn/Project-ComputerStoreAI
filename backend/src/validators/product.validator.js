@@ -24,6 +24,7 @@ export function parseProductPayload(input = {}) {
   const stockQuantity = int(input.stockQuantity ?? 0, 'Tồn kho');
   const lowStockThreshold = int(input.lowStockThreshold ?? 5, 'Ngưỡng sắp hết');
   const categoryId = input.categoryId === '' || input.categoryId === undefined || input.categoryId === null ? null : int(input.categoryId, 'ID danh mục', 1);
+  const brandId = input.brandId === '' || input.brandId === undefined || input.brandId === null ? null : int(input.brandId, 'ID thương hiệu', 1);
   const subtitle = value => typeof value === 'string' ? value.trim() || null : null;
   let specifications = [];
   if (input.specifications) {
@@ -35,20 +36,41 @@ export function parseProductPayload(input = {}) {
     if (!specName || !value || specName.length > 100 || value.length > 500) throw productError('Tên và giá trị thông số kỹ thuật không được để trống.');
     return { name: specName, value, sortOrder: index };
   });
+  let highlightSpecs = [];
+  if (input.highlightSpecs) {
+    try { highlightSpecs = typeof input.highlightSpecs === 'string' ? JSON.parse(input.highlightSpecs) : input.highlightSpecs; } catch { throw productError('Thông số nổi bật không hợp lệ.'); }
+  }
+  if (!Array.isArray(highlightSpecs) || highlightSpecs.length > 12) throw productError('Danh sách thông số nổi bật không hợp lệ (tối đa 12 dòng).');
+  highlightSpecs = highlightSpecs.map((item, index) => {
+    const content = String(item?.content ?? item?.value ?? '').trim();
+    if (!content || content.length > 500) throw productError('Nội dung thông số nổi bật không được để trống và tối đa 500 ký tự.');
+    const orderRaw = item?.sortOrder;
+    const order = orderRaw === undefined || orderRaw === null || orderRaw === '' ? index : int(orderRaw, 'Thứ tự thông số nổi bật', 0);
+    return { content, sortOrder: order };
+  }).sort((a, b) => a.sortOrder - b.sortOrder);
   const isActive = input.isActive === false || input.isActive === 'false' ? false : true;
   const keepImageIds = input.keepImageIds === undefined ? undefined : (typeof input.keepImageIds === 'string' ? JSON.parse(input.keepImageIds) : input.keepImageIds);
   if (keepImageIds !== undefined && (!Array.isArray(keepImageIds) || keepImageIds.some(value => !Number.isSafeInteger(Number(value)) || Number(value) < 1))) throw productError('Danh sách ảnh giữ lại không hợp lệ.');
   const imageOrderIds = input.imageOrderIds === undefined ? keepImageIds : (typeof input.imageOrderIds === 'string' ? JSON.parse(input.imageOrderIds) : input.imageOrderIds);
   if (imageOrderIds !== undefined && (!Array.isArray(imageOrderIds) || imageOrderIds.some(value => !Number.isSafeInteger(Number(value)) || Number(value) < 1))) throw productError('Thứ tự ảnh không hợp lệ.');
   return {
-    name, slug, sku, category: subtitle(input.category), categoryId, brand: subtitle(input.brand), shortDescription: subtitle(input.shortDescription), description: subtitle(input.description),
-    price, originalPrice, costPrice, stockQuantity, lowStockThreshold, isActive, specifications, keepImageIds: keepImageIds?.map(Number), imageOrderIds: imageOrderIds?.map(Number),
+    name, slug, sku, category: subtitle(input.category), categoryId, brand: subtitle(input.brand), brandId, shortDescription: subtitle(input.shortDescription), description: subtitle(input.description),
+    price, originalPrice, costPrice, stockQuantity, lowStockThreshold, isActive, specifications, highlightSpecs, keepImageIds: keepImageIds?.map(Number), imageOrderIds: imageOrderIds?.map(Number),
   };
 }
 
 export function parseProductListQuery(query = {}) {
+  const brandId = query.brandId === undefined || query.brandId === '' ? undefined : int(query.brandId, 'ID thương hiệu', 1);
+  if (brandId !== undefined && brandId > 2147483647) throw productError('ID thương hiệu không hợp lệ.');
+  const price = (value, label) => value === undefined || value === '' ? undefined : int(value, label);
+  const minPrice = price(query.minPrice, 'Giá tối thiểu');
+  const maxPrice = price(query.maxPrice, 'Giá tối đa');
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) throw productError('Khoảng giá không hợp lệ.');
+  const attribute = String(query.attribute || '').trim();
+  const attributeValue = String(query.attributeValue || '').trim();
+  if (Boolean(attribute) !== Boolean(attributeValue) || attribute.length > 100 || attributeValue.length > 500) throw productError('Bộ lọc thuộc tính không hợp lệ.');
   const page = Math.max(Number.parseInt(query.page, 10) || 1, 1);
   const limit = Math.min(Math.max(Number.parseInt(query.limit, 10) || 20, 1), 100);
   const sortMap = { newest: [{ updatedAt: 'desc' }], oldest: [{ createdAt: 'asc' }], priceAsc: [{ price: 'asc' }], priceDesc: [{ price: 'desc' }], nameAsc: [{ name: 'asc' }], nameDesc: [{ name: 'desc' }], stockAsc: [{ stockQuantity: 'asc' }], stockDesc: [{ stockQuantity: 'desc' }] };
-  return { page, limit, search: String(query.search || '').trim(), category: String(query.category || '').trim(), status: String(query.status || '').trim(), stock: String(query.stock || '').trim(), orderBy: sortMap[query.sort] || sortMap.newest };
+  return { page, limit, minPrice, maxPrice, attribute, attributeValue, brandId, search: String(query.search || '').trim(), category: String(query.category || '').trim(), brand: String(query.brand || '').trim(), status: String(query.status || '').trim(), stock: String(query.stock || '').trim(), orderBy: sortMap[query.sort] || sortMap.newest };
 }

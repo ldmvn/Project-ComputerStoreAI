@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import LoginModal from './LoginModal';
 import AccountDropdown from './AccountDropdown';
 import { useAuthStore } from '@/store/auth.store';
+import { useCartStore } from '@/store/cart.store';
 import {
   Search,
   ShoppingCart,
@@ -20,9 +21,15 @@ import {
 } from 'lucide-react';
 import { getCategoryIcon } from '@/components/category/CategoryIcon';
 import { getPublicCategories, type PublicCategory } from '@/services/category.service';
+import { getPublicMenus, type PublicMenu } from '@/services/megaMenu.service';
+import { MegaMenuPanel, MobileMenuGroups } from '@/components/category/MegaMenuPanel';
 
 export default function Header() {
   const [categories, setCategories] = useState<PublicCategory[]>([]);
+  const [menus, setMenus] = useState<PublicMenu[]>([]);
+  const [menuError, setMenuError] = useState('');
+  const [menuLoading, setMenuLoading] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
@@ -30,9 +37,13 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loginOpen, setLoginOpen] = useState(false);
   const categoriesRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
   const user = useAuthStore((state) => state.user);
   const isAdmin = useAuthStore((state) => state.isHydrated && Boolean(state.token) && state.user?.role === 'ADMIN');
   const hydrateAuth = useAuthStore((state) => state.hydrate);
+  const cartCount = useCartStore(state => state.items.reduce((count, item) => count + item.quantity, 0));
+  const hydrateCart = useCartStore(state => state.hydrate);
+  useEffect(() => { hydrateCart(); }, [hydrateCart]);
 
   useEffect(() => {
     void hydrateAuth();
@@ -58,16 +69,38 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    if (!categoriesOpen && !mobileMenuOpen) return;
+    let cancelled = false;
+    setMenuLoading(true);
+    getPublicMenus().then(data => { if (!cancelled) { setMenus(data); setCategories(data.map(menu => menu.category)); setMenuError(''); } }).catch(() => { if (!cancelled) setMenuError('Không tải được Mega Menu. Vui lòng mở lại menu để thử lại.'); }).finally(() => { if (!cancelled) setMenuLoading(false); });
+    return () => { cancelled = true; };
+  }, [categoriesOpen, mobileMenuOpen]);
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
+  useEffect(() => { drawerRef.current?.toggleAttribute('inert', !mobileMenuOpen); }, [mobileMenuOpen]);
+  const cancelClose = () => { if (closeTimer.current) clearTimeout(closeTimer.current); };
+  const scheduleClose = () => { cancelClose(); closeTimer.current = setTimeout(() => { setCategoriesOpen(false); setActiveCategory(null); }, 150); };
+  const closeCategories = () => { setCategoriesOpen(false); setActiveCategory(null); };
+
+  useEffect(() => {
     if (!mobileMenuOpen) return;
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const focusable = () => Array.from(drawerRef.current?.querySelectorAll<HTMLElement>('a[href],button,summary,[tabindex="0"]') || []).filter(e => e.getClientRects().length);
+    focusable()[0]?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMobileMenuOpen(false);
+      if (event.key === 'Tab') {
+        const items = focusable(); const first = items[0]; const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
     };
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', closeOnEscape);
+      previousFocus?.focus();
     };
   }, [mobileMenuOpen]);
 
@@ -79,7 +112,7 @@ export default function Header() {
   };
 
   const toggleCategories = () => {
-    setCategoriesOpen((open) => !open);
+    setCategoriesOpen(true);
     setActiveCategory(null);
   };
 
@@ -101,13 +134,13 @@ export default function Header() {
           </button>
 
           {/* Categories Dropdown - icon + label giống các action khác */}
-          <div ref={categoriesRef} className="relative hidden lg:block">
+          <div ref={categoriesRef} className="relative hidden lg:block" onMouseEnter={() => { cancelClose(); setCategoriesOpen(true); }} onMouseLeave={scheduleClose} onKeyDown={event => { if (event.key === 'Escape') { closeCategories(); categoriesRef.current?.querySelector('button')?.focus(); } }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) closeCategories(); }}>
             <button
               type="button"
               onClick={toggleCategories}
               className="ui-header-action inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-white transition hover:bg-white/15 hover:text-white"
               aria-expanded={categoriesOpen}
-              aria-haspopup="menu"
+              aria-controls="desktop-category-menu"
               aria-label="Danh mục"
             >
               {/* Icon 3 gạch, gạch giữa ngắn hơn */}
@@ -137,18 +170,16 @@ export default function Header() {
             </button>
 
             <div
-              className={`absolute left-0 top-[calc(var(--header-main-height)-10px)] z-50 flex items-stretch origin-top-left transition-all duration-200 ${
+              id="desktop-category-menu"
+              className={`absolute left-0 top-full z-50 flex max-h-[calc(100dvh-100px)] w-[min(1200px,calc(100vw-2rem))] items-stretch overflow-y-auto pt-3 origin-top-left transition-all duration-200 ${
                 categoriesOpen
                   ? 'visible translate-y-0 scale-100 opacity-100'
                   : 'invisible -translate-y-2 scale-95 opacity-0 pointer-events-none'
               }`}
-              onMouseLeave={() => {
-                setCategoriesOpen(false);
-                setActiveCategory(null);
-              }}
+              onMouseEnter={cancelClose}
             >
               <div
-                className="w-[min(280px,calc(100vw-2rem))] rounded-l-lg rounded-r-none border border-slate-200 bg-white p-1.5 shadow-lg shadow-slate-900/10 backdrop-blur-md"
+                className="w-[min(280px,calc(100vw-2rem))] shrink-0 rounded-l-lg rounded-r-none border border-slate-200 bg-white p-1.5 shadow-lg shadow-slate-900/10 backdrop-blur-md"
                 role="menu"
                 aria-label="Danh mục sản phẩm"
               >
@@ -162,6 +193,7 @@ export default function Header() {
                       href={categoryHref(cat.slug)}
                       role="menuitem"
                       onMouseEnter={() => setActiveCategory(cat.id)}
+                      onFocus={() => setActiveCategory(cat.id)}
                       onClick={() => {
                         setCategoriesOpen(false);
                         setActiveCategory(null);
@@ -182,19 +214,12 @@ export default function Header() {
                 })}
               </div>
 
-              {categories.find(category => category.id === activeCategory)?.children.length ? (
-                <div
-                  className="min-h-full w-[min(760px,calc(100vw-19.5rem))] rounded-r-lg border-y border-r border-slate-200 bg-white shadow-lg shadow-slate-900/10"
-                  aria-label={`Danh mục con ${categories.find(category => category.id === activeCategory)?.name}`}
-                >
-                  <nav className="grid grid-cols-2 gap-1 p-3" aria-label="Danh sách danh mục con">
-                    {categories.find(category => category.id === activeCategory)?.children.map(child => {
-                      const Icon = getCategoryIcon(child.icon);
-                      return <Link key={child.id} href={categoryHref(child.slug)} onClick={() => { setCategoriesOpen(false); setActiveCategory(null); }} className="ui-menu-item flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700"><Icon className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="truncate">{child.name}</span></Link>;
-                    })}
-                  </nav>
-                </div>
-              ) : null}
+              {menuLoading && !menus.length && <p role="status" className="p-5 text-sm text-slate-500">Đang tải Mega Menu...</p>}
+              {menuError && <p role="alert" className="p-5 text-sm text-red-600">{menuError}</p>}
+              {(() => {
+                const selected = menus.find(menu => menu.category.id === (activeCategory ?? categories[0]?.id));
+                return selected ? <MegaMenuPanel menu={selected} onNavigate={closeCategories} /> : null;
+              })()}
             </div>
           </div>
 
@@ -262,7 +287,7 @@ export default function Header() {
               <ShoppingCart className="h-5 w-5" />
               <span className="hidden lg:inline">Giỏ hàng</span>
               <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-orange-600 shadow-sm">
-                0
+                {cartCount > 99 ? '99+' : cartCount}
               </span>
             </Link>
 
@@ -305,6 +330,7 @@ export default function Header() {
           />
         )}
         <aside
+          ref={drawerRef}
           className={`fixed left-0 top-0 z-[70] flex h-[100dvh] w-[min(82vw,340px)] flex-col bg-white text-slate-800 shadow-2xl shadow-slate-900/20 transition-transform duration-200 ease-out motion-reduce:transition-none lg:hidden ${mobileMenuOpen ? 'translate-x-0' : 'pointer-events-none -translate-x-full'}`}
           role="dialog"
           aria-modal="true"
@@ -327,6 +353,8 @@ export default function Header() {
           <div className="flex-1 overflow-y-auto px-3 py-4">
             <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Danh mục</p>
             <nav className="space-y-1" aria-label="Danh sách danh mục">
+              {menuLoading && <p role="status" className="px-3 text-sm">Đang tải Mega Menu...</p>}
+              {menuError && <p role="alert" className="px-3 text-sm text-red-600">{menuError}</p>}
               {categories.length === 0 && <p className="px-3 py-2 text-sm text-slate-500">Chưa có danh mục.</p>}
               {categories.map((cat) => {
                 const Icon = getCategoryIcon(cat.icon);
@@ -337,9 +365,12 @@ export default function Header() {
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><Icon className="h-4 w-4" aria-hidden="true" /></span>
                         <span className="min-w-0 truncate">{cat.name}</span>
                       </Link>
-                      {cat.children.length > 0 && <button type="button" aria-label={`${expandedMobileCategory === cat.id ? 'Thu gọn' : 'Mở'} ${cat.name}`} aria-expanded={expandedMobileCategory === cat.id} onClick={() => setExpandedMobileCategory(current => current === cat.id ? null : cat.id)} className="ui-button flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-orange-50 hover:text-orange-600"><ChevronDown className={`h-4 w-4 transition-transform ${expandedMobileCategory === cat.id ? 'rotate-180' : ''}`} aria-hidden="true" /></button>}
+                      {(cat.children.length > 0 || menus.some(menu => menu.category.id === cat.id && (menu.groups.length > 0 || menu.brands.length > 0))) && <button type="button" aria-label={`${expandedMobileCategory === cat.id ? 'Thu gọn' : 'Mở'} ${cat.name}`} aria-expanded={expandedMobileCategory === cat.id} onClick={() => setExpandedMobileCategory(current => current === cat.id ? null : cat.id)} className="ui-button flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-orange-50 hover:text-orange-600"><ChevronDown className={`h-4 w-4 transition-transform ${expandedMobileCategory === cat.id ? 'rotate-180' : ''}`} aria-hidden="true" /></button>}
                     </div>
-                    {expandedMobileCategory === cat.id && <div className="ml-11 border-l border-slate-200 py-1 pl-3">{cat.children.map(child => { const ChildIcon = getCategoryIcon(child.icon); return <Link key={child.id} href={categoryHref(child.slug)} onClick={() => setMobileMenuOpen(false)} className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm text-slate-600 hover:bg-orange-50 hover:text-orange-700"><ChildIcon className="h-4 w-4 shrink-0" aria-hidden="true" /><span className="truncate">{child.name}</span></Link>; })}</div>}
+                    {expandedMobileCategory === cat.id && (() => {
+                      const selected = menus.find(menu => menu.category.id === cat.id);
+                      return selected ? <MobileMenuGroups menu={selected} onNavigate={() => setMobileMenuOpen(false)} /> : <div className="ml-11 border-l py-1 pl-3">{cat.children.map(child => <Link key={child.id} href={categoryHref(child.slug)} onClick={() => setMobileMenuOpen(false)} className="block py-2 text-sm">{child.name}</Link>)}</div>;
+                    })()}
                   </div>
                 );
               })}

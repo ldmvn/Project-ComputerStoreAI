@@ -5,7 +5,7 @@
 // Phase tiếp theo sẽ mount app.js (full app config) tại đây.
 // ============================================================================
 
-import 'dotenv/config';
+import './src/config/env.js';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './src/routes/v1/auth.route.js';
@@ -13,8 +13,14 @@ import { publicBannerRouter, adminBannerRouter } from './src/routes/v1/banner.ro
 import { publicProductSectionRouter, adminProductSectionRouter } from './src/routes/v1/productSection.route.js';
 import { publicProductRouter, adminProductRouter } from './src/routes/v1/productCatalog.route.js';
 import { publicCategoryRouter, adminCategoryRouter } from './src/routes/v1/category.route.js';
+import { adminBrandRouter } from './src/routes/v1/brand.route.js';
+import { publicMegaMenuRouter, adminMegaMenuRouter } from './src/routes/v1/megaMenu.route.js';
 import { bannerMediaDirectory } from './src/services/media.service.js';
 import { productMediaDirectory } from './src/services/productMedia.service.js';
+import { brandMediaDirectory } from './src/services/brandMedia.service.js';
+import { reviewMediaDirectory } from './src/services/reviewMedia.service.js';
+import { verifyResetMailConnection } from './src/services/passwordResetMail.service.js';
+import { cleanupExpiredPasswordResets } from './src/services/passwordReset.service.js';
 
 // ---------------------------------------------------------------------------
 // App instance
@@ -43,7 +49,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Logger request cơ bản — Phase sau sẽ thay bằng morgan/winston
 app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  const loggedUrl = req.path.startsWith('/api/auth/google') ? req.path : req.url;
+  console.log(`[${new Date().toISOString()}] ${req.method} ${loggedUrl}`);
   next();
 });
 
@@ -63,6 +70,9 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', publicCategoryRouter);
 app.use('/api/admin/categories', adminCategoryRouter);
+app.use('/api/admin/brands', adminBrandRouter);
+app.use('/api/mega-menu', publicMegaMenuRouter);
+app.use('/api/admin/mega-menu', adminMegaMenuRouter);
 app.use('/api/banners', publicBannerRouter);
 app.use('/api/admin/banners', adminBannerRouter);
 app.use('/api/product-sections', publicProductSectionRouter);
@@ -76,6 +86,18 @@ app.use('/media/banners', express.static(bannerMediaDirectory, {
   setHeaders: res => res.set('X-Content-Type-Options', 'nosniff'),
 }));
 app.use('/media/products', express.static(productMediaDirectory, {
+  dotfiles: 'deny',
+  immutable: true,
+  maxAge: '1y',
+  setHeaders: res => res.set('X-Content-Type-Options', 'nosniff'),
+}));
+app.use('/media/brands', express.static(brandMediaDirectory, {
+  dotfiles: 'deny',
+  immutable: true,
+  maxAge: '1y',
+  setHeaders: res => res.set('X-Content-Type-Options', 'nosniff'),
+}));
+app.use('/media/reviews', express.static(reviewMediaDirectory, {
   dotfiles: 'deny',
   immutable: true,
   maxAge: '1y',
@@ -112,16 +134,23 @@ app.use((error, _req, res, _next) => {
 // Start server
 // ---------------------------------------------------------------------------
 const PORT = process.env.PORT || 5000;
+const otpCleanupTimer = setInterval(() => {
+  void cleanupExpiredPasswordResets().catch(error => console.error('[OTP] Cleanup failed:', error.code || error.name));
+}, 60000);
+otpCleanupTimer.unref();
 const server = app.listen(PORT, () => {
   console.log('──────────────────────────────────────────────');
   console.log(`🚀 Backend is running at: http://localhost:${PORT}`);
   console.log(`❤️  Health check       : http://localhost:${PORT}/api/health`);
   console.log(`🌍 Environment        : ${process.env.NODE_ENV || 'development'}`);
   console.log('──────────────────────────────────────────────');
+  // Verification logs SMTP ready or the exact failure without blocking other APIs.
+  void verifyResetMailConnection().catch(() => {});
 });
 
 // Graceful shutdown
 const shutdown = (signal) => {
+  clearInterval(otpCleanupTimer);
   console.log(`\n${signal} received. Closing server gracefully...`);
   server.close(() => {
     console.log('HTTP server closed.');

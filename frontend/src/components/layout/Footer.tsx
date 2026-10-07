@@ -49,7 +49,7 @@ const trustBadges = [
   { icon: CreditCard, label: 'Thanh toán an toàn' },
 ];
 
-export default function Footer() {
+export default function Footer({ compact = false }: { compact?: boolean }) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -63,6 +63,7 @@ export default function Footer() {
     }
   };
 
+  if (compact) return <footer className="mt-auto border-t border-slate-200 bg-white py-6"><div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-sm sm:flex-row"><Link href="/" className="font-bold tracking-tight text-slate-800">DUCMANH PC</Link><Link href="/customer/products" className="text-slate-500 hover:text-orange-700">Khám phá sản phẩm</Link><p className="text-xs text-slate-400">© 2026 DUCMANH PC</p></div></footer>;
   return (
     <footer className="mt-auto border-t border-slate-200 bg-slate-50">
       {/* ===== Trust Badges ===== */}

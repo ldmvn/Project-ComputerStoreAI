@@ -1,0 +1,94 @@
+import { prisma } from '../config/prisma.js';
+import { menuError, safeMenuUrl } from '../validators/megaMenu.validator.js';
+
+const orderBy = [{ sortOrder: 'asc' }, { id: 'asc' }];
+const include = { groups: { orderBy, include: { items: { orderBy, include: { category: true, brand: true } } } }, brands: { orderBy: [{ sortOrder: 'asc' }, { brandId: 'asc' }], include: { brand: true } } };
+const productUrl = params => `/customer/products?${new URLSearchParams(params)}`;
+
+export async function attributeOptions(db = prisma) {
+  const rows = await db.productSpecification.findMany({ where: { product: { isDeleted: false } }, distinct: ['name', 'value'], select: { name: true, value: true }, orderBy: [{ name: 'asc' }, { value: 'asc' }] });
+  const options = new Map();
+  for (const row of rows) options.set(row.name, [...(options.get(row.name) || []), row.value]);
+  return [...options].map(([name, values]) => ({ name, values }));
+}
+export function itemHref(item, rootSlug, activeCategoryIds, specs) {
+  const params = { category: rootSlug };
+  if (item.type === 'CATEGORY') return item.category?.isActive && activeCategoryIds.has(item.categoryId) ? productUrl({ category: item.category.slug }) : null;
+  if (item.type === 'BRAND') return item.brand?.isActive ? productUrl({ ...params, brand: item.brand.slug }) : null;
+  if (item.type === 'PRICE_FILTER') {
+    if (item.minPrice !== null) params.minPrice = String(item.minPrice);
+    if (item.maxPrice !== null) params.maxPrice = String(item.maxPrice);
+    return productUrl(params);
+  }
+  if (item.type === 'ATTRIBUTE_FILTER') return specs.has(JSON.stringify([item.attributeName, item.attributeValue])) ? productUrl({ ...params, attribute: item.attributeName, attributeValue: item.attributeValue }) : null;
+  return item.type === 'CUSTOM_URL' && safeMenuUrl(item.customUrl) ? item.customUrl : null;
+}
+async function visibility(db) {
+  const [categories, specs] = await Promise.all([
+    db.category.findMany({ select: { id: true, parentId: true, isActive: true } }),
+    db.productSpecification.findMany({ where: { product: { isDeleted: false, isActive: true } }, distinct: ['name', 'value'], select: { name: true, value: true } }),
+  ]);
+  const byId = new Map(categories.map(c => [c.id, c]));
+  const valid = new Set();
+  for (const category of categories) {
+    let current = category; const seen = new Set();
+    while (current?.isActive && !seen.has(current.id)) {
+      seen.add(current.id);
+      if (current.parentId === null) { valid.add(category.id); break; }
+      current = byId.get(current.parentId);
+    }
+  }
+  return { valid, specs: new Set(specs.map(s => JSON.stringify([s.name, s.value]))) };
+}
+export async function getAdminMenu(categoryId) {
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!category || category.parentId !== null) throw menuError('Chọn danh mục cấp chính còn tồn tại.', 404);
+  const [menu, state] = await Promise.all([prisma.megaMenu.findUnique({ where: { categoryId }, include }), visibility(prisma)]);
+  if (!menu) return { category, menu: null };
+  return { category, menu: { ...menu, groups: menu.groups.map(g => ({ ...g, items: g.items.map(item => ({ ...item, invalid: !itemHref(item, category.slug, state.valid, state.specs) })) })) } };
+}
+export async function saveMenu(categoryId, isActive, brandIds) {
+  return prisma.$transaction(async tx => {
+    const category = await tx.category.findUnique({ where: { id: categoryId } });
+    if (!category || category.parentId !== null) throw menuError('Chọn danh mục cấp chính còn tồn tại.');
+    const data = { isActive };
+    if (brandIds !== undefined) {
+      if (await tx.brand.count({ where: { id: { in: brandIds } } }) !== brandIds.length) throw menuError('Thương hiệu nổi bật không tồn tại.');
+      data.brands = { deleteMany: {}, create: brandIds.map((brandId, sortOrder) => ({ brandId, sortOrder })) };
+    }
+    return tx.megaMenu.upsert({ where: { categoryId }, create: { categoryId, isActive, ...(brandIds === undefined ? {} : { brands: { create: brandIds.map((brandId, sortOrder) => ({ brandId, sortOrder })) } }) }, update: data, include });
+  });
+}
+export async function createGroup(categoryId, data) {
+  const { menu } = await getAdminMenu(categoryId);
+  if (!menu) throw menuError('Lưu cấu hình Mega Menu trước khi thêm nhóm.');
+  return prisma.megaMenuGroup.create({ data: { ...data, megaMenuId: menu.id } });
+}
+export const updateGroup = (id, data) => prisma.megaMenuGroup.update({ where: { id }, data });
+export const deleteGroup = id => prisma.megaMenuGroup.delete({ where: { id } });
+export async function saveItem(groupId, id, data) {
+  try {
+    return await prisma.$transaction(async tx => {
+      if (!await tx.megaMenuGroup.findUnique({ where: { id: groupId } })) throw menuError('Nhóm không tồn tại.', 404);
+      if (id && !await tx.megaMenuItem.findFirst({ where: { id, groupId } })) throw menuError('Mục không tồn tại.', 404);
+      if (data.categoryId && !await tx.category.findUnique({ where: { id: data.categoryId } })) throw menuError('Danh mục không tồn tại.');
+      if (data.brandId && !await tx.brand.findUnique({ where: { id: data.brandId } })) throw menuError('Thương hiệu không tồn tại.');
+      if (data.type === 'ATTRIBUTE_FILTER' && !await tx.productSpecification.findFirst({ where: { name: data.attributeName, value: data.attributeValue, product: { isDeleted: false } } })) throw menuError('Cặp thuộc tính/giá trị không tồn tại trong sản phẩm.');
+      const target = { type: data.type };
+      for (const field of ['categoryId', 'brandId', 'attributeName', 'attributeValue', 'minPrice', 'maxPrice', 'customUrl']) target[field] = data[field];
+      if (await tx.megaMenuItem.findFirst({ where: { groupId, ...target, ...(id ? { id: { not: id } } : {}) } })) throw menuError('Liên kết này đã có trong nhóm.', 409);
+      return id ? tx.megaMenuItem.update({ where: { id }, data }) : tx.megaMenuItem.create({ data: { ...data, groupId } });
+    }, { isolationLevel: 'Serializable' });
+  } catch (error) { if (error.code === 'P2003') throw menuError('Dữ liệu tham chiếu đã bị xóa. Vui lòng tải lại.'); throw error; }
+}
+export const deleteItem = id => prisma.megaMenuItem.delete({ where: { id } });
+export async function publicMenus(slug) {
+  const [categories, state] = await Promise.all([
+    prisma.category.findMany({ where: { parentId: null, isActive: true, ...(slug ? { slug } : {}) }, orderBy, include: { children: { where: { isActive: true }, orderBy, select: { id: true, name: true, slug: true, icon: true } }, megaMenu: { include } } }),
+    visibility(prisma),
+  ]);
+  return categories.map(category => {
+    const menu = category.megaMenu?.isActive ? category.megaMenu : null;
+    return { category: { id: category.id, name: category.name, slug: category.slug, icon: category.icon, href: productUrl({ category: category.slug }), children: category.children }, groups: (menu?.groups || []).filter(g => g.isActive).map(g => ({ id: g.id, title: g.title, columnSpan: g.columnSpan, items: g.items.filter(i => i.isActive).map(i => ({ id: i.id, label: i.label, type: i.type, href: itemHref(i, category.slug, state.valid, state.specs) })).filter(i => i.href) })).filter(g => g.items.length), brands: (menu?.brands || []).filter(b => b.brand.isActive).map(({ brand }) => ({ id: brand.id, name: brand.name, slug: brand.slug, logoUrl: brand.logoUrl, href: productUrl({ category: category.slug, brand: brand.slug }) })) };
+  });
+}

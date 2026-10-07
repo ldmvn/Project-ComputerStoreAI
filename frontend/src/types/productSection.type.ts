@@ -1,11 +1,13 @@
-import type { ProductSpecification } from './product.type';
+import type { ProductHighlightSpec, ProductSpecification } from './product.type';
 
 export type SectionProduct = {
+  slug?: string;
   id: number;
   name: string;
   price: number;
   originalPrice?: number | null;
   specifications?: ProductSpecification[];
+  highlightSpecs?: ProductHighlightSpec[];
   primaryImage?: string | null;
   sortOrder?: number;
 };

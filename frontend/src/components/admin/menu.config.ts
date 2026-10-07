@@ -54,6 +54,7 @@ export const dashboardMenu: DashboardMenuGroup[] = [
       { label: 'Danh mục', path: '/admin/categories', icon: Layers },
       { label: 'Thương hiệu', path: '/admin/brands', icon: Badge },
       { label: 'Thuộc tính', path: '/admin/attributes', icon: SlidersHorizontal },
+      { label: 'Mega Menu', path: '/admin/mega-menu', icon: PanelTop },
       { label: 'Kho', path: '/admin/inventory', icon: Warehouse },
       { label: 'Quản lý Banner', path: '/admin/banners', icon: Image },
       { label: 'Khối sản phẩm', path: '/admin/product-sections', icon: PanelTop },

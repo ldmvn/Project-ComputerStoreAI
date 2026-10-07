@@ -21,8 +21,9 @@ const now = '2026-10-02T10:00:00.000Z';
     if (pathname.endsWith('/auth/me')) return reply(200, { user: { id: 1, fullName: 'Admin test', email: 'admin@example.com', phone: '0123456789', role: 'ADMIN' } });
     if (pathname.endsWith('/banners/home')) return reply(200, { mainHero: [], sideSlides: { SIDE_LEFT: [], SIDE_RIGHT_TOP: [], SIDE_RIGHT_MIDDLE: [], SIDE_RIGHT_BOTTOM: [], BOTTOM_LEFT: [], BOTTOM_RIGHT: [] } });
     if (pathname.endsWith('/product-sections/home')) return reply(200, { sections: [] });
-    if (pathname.endsWith('/categories/menu') && request.method() === 'GET') {
-      return reply(200, { categories: categories.filter(item => item.isActive && item.parentId === null).sort((a, b) => a.sortOrder - b.sortOrder).map(item => ({ id: item.id, name: item.name, slug: item.slug, icon: item.icon, children: categories.filter(child => child.parentId === item.id && child.isActive).map(({ id, name, slug, icon }) => ({ id, name, slug, icon })) })) });
+    if ((pathname.endsWith('/categories/menu') || pathname.endsWith('/mega-menu')) && request.method() === 'GET') {
+      const roots = categories.filter(item => item.isActive && item.parentId === null).sort((a, b) => a.sortOrder - b.sortOrder).map(item => ({ id: item.id, name: item.name, slug: item.slug, icon: item.icon, children: categories.filter(child => child.parentId === item.id && child.isActive).map(({ id, name, slug, icon }) => ({ id, name, slug, icon })) }));
+      return reply(200, pathname.endsWith('/mega-menu') ? { menus: roots.map(category => ({ category: { ...category, href: `/customer/products?category=${category.slug}` }, groups: [], brands: [] })) } : { categories: roots });
     }
     if (pathname.endsWith('/admin/categories') && request.method() === 'GET') return reply(200, { categories: [...categories] });
     if (pathname.endsWith('/admin/categories') && request.method() === 'POST') {

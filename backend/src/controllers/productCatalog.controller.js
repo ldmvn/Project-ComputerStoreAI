@@ -1,6 +1,7 @@
 import { createProduct, getProduct, getProductBySlug, listCategories, listProducts, removeImage, setStatus, softDeleteProduct, updateProduct } from '../services/productCatalog.service.js';
 import { discardProductTemp, removeProductImage, saveProductImages } from '../services/productMedia.service.js';
 import { parseProductListQuery, parseProductPayload, productId, productError } from '../validators/product.validator.js';
+import { recordProductView } from '../services/productStatistics.service.js';
 
 const asyncHandler = handler => (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
 
@@ -23,9 +24,10 @@ export const categories = asyncHandler(async (_req, res) => res.json({ categorie
 export const adminDetail = asyncHandler(async (req, res) => res.json({ product: await getProduct(productId(req.params.id)) }));
 export const publicList = asyncHandler(async (req, res) => {
   const result = await listProducts({ ...parseProductListQuery(req.query), status: 'active' });
-  res.json({ products: result.items, meta: result.meta });
+  res.json({ products: result.items, meta: result.meta, filters: result.filters });
 });
 export const publicDetail = asyncHandler(async (req, res) => res.json({ product: await getProductBySlug(req.params.slug) }));
+export const publicView = asyncHandler(async (req, res) => res.json(await recordProductView(req.params.slug, req.body?.viewId)));
 export const create = asyncHandler(async (req, res) => withImages(req, async images => res.status(201).json({ product: await createProduct(parseBody(req), images), message: 'Đã tạo sản phẩm.' })));
 export const update = asyncHandler(async (req, res) => withImages(req, async images => res.json({ product: await updateProduct(productId(req.params.id), parseBody(req), images), message: 'Đã cập nhật sản phẩm.' })));
 export const status = asyncHandler(async (req, res) => res.json({ product: await setStatus(productId(req.params.id), req.body?.isActive === true || req.body?.isActive === 'true'), message: 'Đã cập nhật trạng thái sản phẩm.' }));

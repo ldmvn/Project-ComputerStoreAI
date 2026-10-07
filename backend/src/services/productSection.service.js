@@ -1,13 +1,17 @@
 import { prisma } from '../config/prisma.js';
 import { productSectionError } from '../validators/productSection.validator.js';
 
-const productSelect = { id: true, name: true, price: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { id: 'asc' }], select: { imageUrl: true }, take: 1 } };
+const productSelect = { id: true, slug: true, name: true, price: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { id: 'asc' }], select: { imageUrl: true }, take: 1 } };
 const homeProductSelect = {
   ...productSelect,
   originalPrice: true,
   specifications: {
     orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     select: { id: true, name: true, value: true, sortOrder: true },
+  },
+  highlightSpecs: {
+    orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    select: { id: true, content: true, sortOrder: true },
   },
 };
 const sectionInclude = {
@@ -37,10 +41,12 @@ function serialize(section) {
     updatedAt: section.updatedAt,
     products: section.items.map(item => ({
       id: item.product.id,
+      slug: item.product.slug,
       name: item.product.name,
       price: item.product.price,
       originalPrice: item.product.originalPrice,
       specifications: item.product.specifications,
+      highlightSpecs: item.product.highlightSpecs,
       primaryImage: item.product.images?.[0]?.imageUrl || null,
       sortOrder: item.sortOrder,
     })),

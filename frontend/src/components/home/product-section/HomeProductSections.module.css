@@ -125,6 +125,9 @@
   line-height: 18px;
 }
 .productContent { display: flex; flex-direction: column; min-width: 0; padding: 12px; }
+.productLink::after { content: ''; position: absolute; inset: 0; z-index: 2; border-radius: 14px; }
+.productLink:focus-visible { outline: none; }
+.productCard:focus-within { outline: 2px solid #f97316; outline-offset: -2px; }
 .productName {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -137,11 +140,9 @@
   line-height: 21px;
   color: #334155;
 }
-.specifications { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; margin-top: 10px; padding: 10px; border-radius: 10px; background: #f5f5f5; transition: box-shadow var(--ui-duration) var(--ui-ease); }
-.specifications li { display: flex; align-items: center; gap: 6px; min-width: 0; color: #475569; font-size: 12px; line-height: 18px; }
-.specifications li:first-child, .specifications li:nth-child(5) { grid-column: 1 / -1; }
-.specifications li > svg { flex-shrink: 0; color: #64748b; }
-.specifications li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.specifications { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; padding: 10px; border-radius: 10px; background: #f5f5f5; transition: box-shadow var(--ui-duration) var(--ui-ease); }
+.specifications li { display: block; min-width: 0; color: #475569; font-size: 12px; line-height: 18px; }
+.specifications li > span { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pricing { margin-top: 12px; }
 .originalPrice { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 4px; color: #64748b; font-size: 12px; line-height: 18px; }
 .discountPercent { padding: 1px 5px; border-radius: 4px; background: #fff1f2; color: #be123c; font-weight: 600; }
@@ -187,10 +188,8 @@
   .productImage img { inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); }
   .productContent { padding: 8px; }
   .productName { min-height: 32px; font-size: 12px; line-height: 16px; }
-  .specifications { grid-template-columns: minmax(0, 1fr); gap: 2px; margin-top: 6px; padding: 6px; border-radius: 8px; }
-  .specifications li { gap: 4px; font-size: 10px; line-height: 14px; }
-  .specifications li:nth-child(n + 4) { display: none; }
-  .specifications li > svg { width: 11px; height: 11px; }
+  .specifications { grid-template-columns: minmax(0, 1fr); gap: 1px; margin-top: 6px; padding: 6px; border-radius: 8px; }
+  .specifications li { font-size: 10px; line-height: 14px; }
   .pricing { margin-top: 6px; }
   .originalPrice { margin-bottom: 2px; font-size: 10px; line-height: 14px; }
   .price { font-size: 15px; line-height: 1.25; }

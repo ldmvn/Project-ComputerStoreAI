@@ -1,8 +1,3 @@
-export default function Page() {
-  return (
-    <section>
-      <h1 className="text-2xl font-semibold">Sản phẩm</h1>
-      <p className="mt-3 text-slate-600">Trang sản phẩm đang được chuẩn bị.</p>
-    </section>
-  );
-}
+import { Suspense } from 'react';
+import ProductCatalog from '@/components/product/ProductCatalog';
+export default function Page() { return <Suspense fallback={<p>Đang tải sản phẩm...</p>}><ProductCatalog /></Suspense>; }

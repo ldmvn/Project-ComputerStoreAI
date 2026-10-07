@@ -7,6 +7,7 @@ import CategoryIcon from '@/components/category/CategoryIcon';
 import Modal from '@/components/ui/Modal';
 import { useAuthStore } from '@/store/auth.store';
 import { createCategory, deleteCategory, getAdminCategories, setCategoryOrder, setCategoryStatus, updateCategory, type Category, type CategoryInput } from '@/services/category.service';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import CategoryForm from './CategoryForm';
 
 type Filters = { search: string; status: string; type: string; sort: string };
@@ -49,6 +50,7 @@ export default function CategoryManager() {
   const [editor, setEditor] = useState<Category | null | undefined>(undefined);
   const [details, setDetails] = useState<Category | null>(null);
   const [orderDrafts, setOrderDrafts] = useState<Record<number, string>>({});
+  const confirm = useConfirm();
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -75,8 +77,14 @@ export default function CategoryManager() {
   }, editor ? 'Đã cập nhật danh mục.' : 'Đã tạo danh mục.');
 
   const toggle = (category: Category) => void perform(() => setCategoryStatus(token!, category.id, !category.isActive), category.isActive ? 'Đã ẩn danh mục.' : 'Đã hiển thị danh mục.');
-  const remove = (category: Category) => {
-    if (!window.confirm(`Xóa danh mục “${category.name}”? Thao tác này không thể hoàn tác.`)) return;
+  const remove = async (category: Category) => {
+    const accepted = await confirm({
+      title: `Xóa danh mục “${category.name}”?`,
+      description: 'Thao tác này không thể hoàn tác. Các danh mục con và sản phẩm liên quan có thể bị ảnh hưởng.',
+      confirmLabel: 'Xóa danh mục',
+      destructive: true,
+    });
+    if (!accepted) return;
     void perform(() => deleteCategory(token!, category.id), 'Đã xóa danh mục.');
   };
   const updateOrder = (category: Category) => {
