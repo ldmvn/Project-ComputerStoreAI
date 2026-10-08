@@ -25,3 +25,13 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+
+# Graphify - knowledge graph outputs (generated, do not commit)
+graphify-out/
+
+# Impeccable - ephemeral/local files (do not commit)
+.impeccable/config.local.json
+.impeccable/screenshots/
+.impeccable/live/
+.impeccable/cache/
+/docs/
