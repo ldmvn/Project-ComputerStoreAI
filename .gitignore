@@ -35,3 +35,6 @@ graphify-out/
 .impeccable/live/
 .impeccable/cache/
 /docs/
+.claude/
+.impeccable/
+
