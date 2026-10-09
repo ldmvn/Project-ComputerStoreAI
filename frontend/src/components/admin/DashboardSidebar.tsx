@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { ChevronDown, X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -11,6 +10,7 @@ type DashboardSidebarProps = {
   collapsed: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  onExpandSidebar: () => void;
 };
 
 function isPathActive(pathname: string, path: string) {
@@ -21,7 +21,7 @@ function groupHasActiveChild(pathname: string, group: DashboardMenuGroup) {
   return group.children.some((item) => isPathActive(pathname, item.path));
 }
 
-export default function DashboardSidebar({ collapsed, mobileOpen, onCloseMobile }: DashboardSidebarProps) {
+export default function DashboardSidebar({ collapsed, mobileOpen, onCloseMobile, onExpandSidebar }: DashboardSidebarProps) {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
@@ -35,7 +35,14 @@ export default function DashboardSidebar({ collapsed, mobileOpen, onCloseMobile 
     });
   }, [pathname]);
 
+  // Group children are hidden while the rail is collapsed, so toggling there would open a
+  // submenu nobody can see. Expand the rail instead and reveal the group.
   const toggleGroup = (label: string) => {
+    if (collapsed) {
+      onExpandSidebar();
+      setOpenGroups((current) => ({ ...current, [label]: true }));
+      return;
+    }
     setOpenGroups((current) => ({ ...current, [label]: !current[label] }));
   };
 
@@ -59,16 +66,11 @@ export default function DashboardSidebar({ collapsed, mobileOpen, onCloseMobile 
         } ${collapsed ? 'lg:w-[76px]' : 'lg:w-64'}`}
         aria-label="Menu dashboard"
       >
-        <div className="flex h-[var(--header-main-height)] shrink-0 items-center justify-between border-b border-slate-200 px-4">
-          <div className={`min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
-            <Image src="/logo.png" alt="DUCMANH PC" width={132} height={57} className="h-10 w-auto object-contain object-left" priority />
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-600">Admin Dashboard</p>
-          </div>
-          <span className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white ${collapsed ? 'lg:flex' : ''}`}>D</span>
+        <div className="flex shrink-0 items-center justify-end border-b border-slate-200 px-3 py-2 lg:hidden">
           <button
             type="button"
             onClick={onCloseMobile}
-            className="ui-button inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 lg:hidden"
+            className="ui-button inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             aria-label="Đóng menu dashboard"
             title="Đóng menu dashboard"
           >

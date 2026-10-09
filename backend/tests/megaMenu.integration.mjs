@@ -5,7 +5,7 @@ import { prisma } from '../src/config/prisma.js';
 import { createAccessToken } from '../src/services/token.service.js';
 const base = process.env.MEGA_MENU_TEST_API || `http://localhost:${process.env.PORT || 5000}/api`;
 const marker = `mega-${randomUUID().slice(0, 8)}`;
-const ids = { categories: [], brands: [], products: [], users: [] };
+const ids = { categories: [], brands: [], products: [], users: [], attributes: [] };
 let token;
 const request = async (path, method = 'GET', body, auth = true) => {
   const response = await fetch(`${base}${path}`, { method, headers: { ...(auth ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
@@ -26,8 +26,20 @@ try {
     brands.push(brand);
   }
   const brandCount = await prisma.brand.count(); const categoryCount = await prisma.category.count();
+  // ATTRIBUTE_FILTER menu items reference normalized Attribute/AttributeValue records, so the
+  // products are tagged through ProductAttributeValue rather than free-text specifications.
+  const ramAttribute = await prisma.attribute.create({
+    data: { name: `${marker} RAM`, slug: `${marker}-ram`, type: 'SELECT', values: { create: [{ value: '16GB', sortOrder: 0 }, { value: '8GB', sortOrder: 1 }] }, categories: { create: { categoryId: child.id } } },
+    include: { values: { orderBy: { sortOrder: 'asc' } } },
+  });
+  ids.attributes.push(ramAttribute.id);
+  const [ram16, ram8] = ramAttribute.values;
   for (const [index, price] of [14000000, 15000000, 16000000].entries()) {
-    const product = await prisma.product.create({ data: { name: `${marker} Product ${index}`, slug: `${marker}-product-${index}`, sku: `${marker}-${index}`, categoryId: child.id, brandId: brands[index === 2 ? 1 : 0].id, price, stockQuantity: 1, specifications: { create: { name: 'RAM', value: index === 2 ? '8GB' : '16GB' } } } }); ids.products.push(product.id);
+    const product = await prisma.product.create({ data: {
+      name: `${marker} Product ${index}`, slug: `${marker}-product-${index}`, sku: `${marker}-${index}`, categoryId: child.id, brandId: brands[index === 2 ? 1 : 0].id, price, stockQuantity: 1,
+      specifications: { create: { name: 'RAM', value: index === 2 ? '8GB' : '16GB' } },
+      attributeValues: { create: { attributeId: ramAttribute.id, attributeValueId: index === 2 ? ram8.id : ram16.id } },
+    } }); ids.products.push(product.id);
   }
   const path = `/admin/mega-menu/categories/${root.id}`;
   assert.equal((await ok(path)).menu, null);
@@ -40,10 +52,11 @@ try {
   const asus = (await ok(itemPath, 'POST', { label: 'ASUS', type: 'BRAND', brandId: brands[1].id, sortOrder: 10 }, 201)).item;
   assert.equal((await request(itemPath, 'POST', { label: 'Acer duplicate', type: 'BRAND', brandId: brands[0].id })).status, 409);
   const price = (await ok(`/admin/mega-menu/groups/${priceGroup.id}/items`, 'POST', { label: 'Dưới 15 triệu', type: 'PRICE_FILTER', minPrice: 0, maxPrice: 15000000 }, 201)).item;
-  const attr = (await ok(itemPath, 'POST', { label: 'RAM 16GB', type: 'ATTRIBUTE_FILTER', attributeName: 'RAM', attributeValue: '16GB', sortOrder: 30 }, 201)).item;
+  const attr = (await ok(itemPath, 'POST', { label: 'RAM 16GB', type: 'ATTRIBUTE_FILTER', attributeId: ramAttribute.id, attributeValueId: ram16.id, sortOrder: 30 }, 201)).item;
   await ok(itemPath, 'POST', { label: 'Gaming', type: 'CATEGORY', categoryId: child.id, sortOrder: 40 }, 201);
   await ok(itemPath, 'POST', { label: 'Build PC', type: 'CUSTOM_URL', customUrl: '/customer/build-pc', sortOrder: 50 }, 201);
-  assert.equal((await request(itemPath, 'POST', { label: 'Bad', type: 'ATTRIBUTE_FILTER', attributeName: 'RAM', attributeValue: 'invalid' })).status, 400);
+  assert.equal((await request(itemPath, 'POST', { label: 'Bad', type: 'ATTRIBUTE_FILTER', attributeId: ramAttribute.id, attributeValueId: 2147483647 })).status, 400, 'Unknown attribute value is rejected');
+  assert.equal((await request(itemPath, 'POST', { label: 'Bad', type: 'ATTRIBUTE_FILTER', attributeId: ramAttribute.id })).status, 400, 'Attribute value is required');
   const read = async () => (await request(`/mega-menu/${root.slug}`, 'GET', undefined, false)).data.menus[0];
   let menu = await read(); assert.equal(menu.groups[0].title, group.title); assert.equal(menu.groups[0].items[0].label, 'ASUS'); assert.equal(menu.brands.length, 2);
   assert.match((await request('/mega-menu', 'GET', undefined, false)).headers.get('cache-control'), /max-age=30/);
@@ -65,10 +78,16 @@ try {
   await ok(`/admin/brands/${disposable.id}`, 'DELETE'); ids.brands.splice(ids.brands.indexOf(disposable.id), 1);
   assert.ok(!(await read()).groups.flatMap(g => g.items).some(i => i.id === orphan.id));
   assert.equal((await ok(path)).menu.groups.flatMap(g => g.items).find(i => i.id === orphan.id).invalid, true);
-  const spec = await prisma.productSpecification.create({ data: { productId: ids.products[0], name: marker, value: 'Only value' } });
-  const stale = (await ok(itemPath, 'POST', { label: 'Temporary attribute', type: 'ATTRIBUTE_FILTER', attributeName: marker, attributeValue: 'Only value' }, 201)).item;
-  await prisma.productSpecification.delete({ where: { id: spec.id } });
-  assert.ok(!(await read()).groups.flatMap(g => g.items).some(i => i.id === stale.id), 'Missing specification values are hidden');
+  const tempAttribute = await prisma.attribute.create({ data: { name: `${marker} Temp`, slug: `${marker}-temp`, type: 'SELECT', values: { create: { value: 'Only value' } } }, include: { values: true } });
+  ids.attributes.push(tempAttribute.id);
+  const tempValue = tempAttribute.values[0];
+  const tagged = await prisma.productAttributeValue.create({ data: { productId: ids.products[0], attributeId: tempAttribute.id, attributeValueId: tempValue.id } });
+  const stale = (await ok(itemPath, 'POST', { label: 'Temporary attribute', type: 'ATTRIBUTE_FILTER', attributeId: tempAttribute.id, attributeValueId: tempValue.id }, 201)).item;
+  // No product carries the value any more: the link still resolves but has nothing to show.
+  await prisma.productAttributeValue.delete({ where: { id: tagged.id } });
+  assert.ok(!(await read()).groups.flatMap(g => g.items).some(i => i.id === stale.id), 'Attribute values with no products are hidden');
+  // Deleting the value itself nulls the FK, so the item is reported as a broken reference.
+  await prisma.attributeValue.delete({ where: { id: tempValue.id } });
   assert.equal((await ok(path)).menu.groups.flatMap(g => g.items).find(i => i.id === stale.id).invalid, true);
   await prisma.category.update({ where: { id: root.id }, data: { isActive: false } });
   assert.equal((await request(`/mega-menu/${root.slug}`, 'GET', undefined, false)).status, 404);
@@ -81,6 +100,10 @@ try {
   console.log('PASS Mega Menu API: auth, five types, existing references, duplicate rejection, descendant/brand/price/attribute filters, inclusive prices, status/order, featured brands, safe deletion and unchanged product counts');
 } finally {
   await prisma.product.deleteMany({ where: { id: { in: ids.products } } });
+  // Products cascade their ProductAttributeValue rows, so the values are now unreferenced.
+  await prisma.attributeValue.deleteMany({ where: { attributeId: { in: ids.attributes } } });
+  await prisma.categoryAttribute.deleteMany({ where: { attributeId: { in: ids.attributes } } });
+  await prisma.attribute.deleteMany({ where: { id: { in: ids.attributes } } });
   for (const id of ids.categories.reverse()) await prisma.category.deleteMany({ where: { id } });
   await prisma.brand.deleteMany({ where: { id: { in: ids.brands } } });
   await prisma.user.deleteMany({ where: { id: { in: ids.users } } });

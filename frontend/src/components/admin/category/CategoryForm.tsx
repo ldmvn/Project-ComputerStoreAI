@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { slugifyCategory } from '@/components/admin/category/category-slug';
@@ -34,7 +34,7 @@ export default function CategoryForm({ category, categories, busy, error, onClos
       categories.filter(item => item.parentId === current).forEach(item => { descendants.add(item.id); pending.push(item.id); });
     }
   }
-  const inputClass = 'mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-orange-100';
+  const inputClass = 'mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100';
 
   return (
     <Modal title={category ? 'Sửa danh mục' : 'Thêm danh mục'} onClose={onClose} busy={busy}>

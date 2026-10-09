@@ -22,7 +22,7 @@ export function parseGroup(input = {}) {
   return { title: text(input.title, 'Tên nhóm', 191), sortOrder: menuInt(input.sortOrder ?? 0, 'Thứ tự', 0), columnSpan: menuInt(input.columnSpan ?? 1, 'Column span', 1, 4), isActive: active(input.isActive) };
 }
 export function parseItem(input = {}) {
-  const data = { label: text(input.label, 'Tên hiển thị', 191), type: input.type, sortOrder: menuInt(input.sortOrder ?? 0, 'Thứ tự', 0), isActive: active(input.isActive), categoryId: null, brandId: null, attributeName: null, attributeValue: null, minPrice: null, maxPrice: null, customUrl: null };
+  const data = { label: text(input.label, 'Tên hiển thị', 191), type: input.type, sortOrder: menuInt(input.sortOrder ?? 0, 'Thứ tự', 0), isActive: active(input.isActive), categoryId: null, brandId: null, attributeId: null, attributeValueId: null, attributeName: null, attributeValue: null, minPrice: null, maxPrice: null, customUrl: null };
   if (data.type === 'CATEGORY') data.categoryId = menuInt(input.categoryId, 'Danh mục');
   else if (data.type === 'BRAND') data.brandId = menuInt(input.brandId, 'Thương hiệu');
   else if (data.type === 'PRICE_FILTER') {
@@ -31,8 +31,8 @@ export function parseItem(input = {}) {
     if (data.minPrice === null && data.maxPrice === null) throw menuError('Nhập ít nhất một giới hạn giá.');
     if (data.minPrice !== null && data.maxPrice !== null && data.minPrice > data.maxPrice) throw menuError('Giá tối thiểu không được lớn hơn giá tối đa.');
   } else if (data.type === 'ATTRIBUTE_FILTER') {
-    data.attributeName = text(input.attributeName, 'Thuộc tính', 100);
-    data.attributeValue = text(input.attributeValue, 'Giá trị thuộc tính', 500);
+    data.attributeId = menuInt(input.attributeId, 'Thuộc tính');
+    data.attributeValueId = menuInt(input.attributeValueId, 'Giá trị thuộc tính');
   } else if (data.type === 'CUSTOM_URL') {
     if (!safeMenuUrl(input.customUrl)) throw menuError('URL phải là đường dẫn nội bộ hoặc URL http/https hợp lệ.');
     data.customUrl = input.customUrl;

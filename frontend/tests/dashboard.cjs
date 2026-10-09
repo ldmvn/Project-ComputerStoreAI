@@ -46,7 +46,7 @@ const assert = require('node:assert/strict');
         await page.getByRole('button', { name: 'Cửa hàng', exact: true }).click();
         await page.getByRole('link', { name: 'Sản phẩm', exact: true }).click();
         await page.waitForURL(base + '/admin/products');
-        await page.getByRole('link', { name: 'Về trang chủ' }).click();
+        await page.getByRole('link', { name: 'Xem cửa hàng' }).click();
         await page.waitForURL(base + '/');
         await page.getByRole('button', { name: 'Tài khoản: Test Account' }).click();
         await page.getByRole('button', { name: 'Đăng xuất' }).click();

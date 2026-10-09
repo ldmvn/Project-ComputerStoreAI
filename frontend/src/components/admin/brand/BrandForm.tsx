@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from 'react';
@@ -29,7 +29,7 @@ export default function BrandForm({ brand, busy, error, onClose, onSave }: { bra
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const inputClass = 'mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-orange-100';
+  const inputClass = 'mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100';
   const selectLogo = (event: React.ChangeEvent<HTMLInputElement>) => {
     const next = event.target.files?.[0] || null;
     event.target.value = '';

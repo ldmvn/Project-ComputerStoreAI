@@ -1,11 +1,19 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowLeft, ArrowUp, Edit3, Plus, Trash2 } from 'lucide-react';
+import {
+  ArrowDown, ArrowUp, ChevronDown, ChevronRight,
+  Edit3, Eye, EyeOff, LayoutGrid, PackageOpen, Plus, ShoppingBag, Trash2,
+} from 'lucide-react';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import AdminFeedback from '@/components/admin/AdminFeedback';
+import { adminActionButtonClass, adminActionGroupClass } from '@/components/admin/adminActionStyles';
+import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import { useAuthStore } from '@/store/auth.store';
-import type { ProductSection, ProductSectionInput } from '@/types/productSection.type';
+import type { ProductSection, ProductSectionInput, SectionProduct } from '@/types/productSection.type';
+import { mediaUrl } from '@/services/http.client';
 import {
   addProductsToSection,
   createProductSection,
@@ -20,19 +28,64 @@ import {
 import ProductPicker from './ProductPicker';
 import ProductSectionForm from './ProductSectionForm';
 
-const buttonClass = 'ui-button ui-button--neutral inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-40';
+const btn = adminActionButtonClass;
+
 function sectionVisibility(section: ProductSection) {
-  if (!section.isActive) return { label: 'Đang ẩn', className: 'text-slate-500' };
-  if (!section.products.length) return { label: 'Chưa hiển thị - chưa có sản phẩm', className: 'text-amber-700' };
-  return { label: 'Đang hiển thị trên trang chủ', className: 'text-green-700' };
+  if (!section.isActive) return { label: 'Đang ẩn', cls: 'text-slate-400' };
+  if (!section.products.length) return { label: 'Chưa có sản phẩm — không hiển thị', cls: 'text-amber-600' };
+  return { label: 'Đang hiển thị trên trang chủ', cls: 'text-green-600' };
+}
+
+function ProductRow({
+  product, index, total, busy,
+  onMoveUp, onMoveDown, onRemove,
+}: {
+  product: SectionProduct; index: number; total: number; busy: boolean;
+  onMoveUp: () => void; onMoveDown: () => void; onRemove: () => void;
+}) {
+  const outOfStock = typeof product.stockQuantity === 'number' && product.stockQuantity === 0;
+  const hidden = product.isActive === false;
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2.5">
+      {/* rank */}
+      <span className="w-5 shrink-0 text-center text-xs font-semibold tabular-nums text-slate-400">{index + 1}</span>
+
+      {/* thumbnail */}
+      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md border border-slate-100 bg-slate-50">
+        {product.primaryImage ? (
+          <img src={mediaUrl(product.primaryImage)} alt={product.name} className="h-full w-full object-cover" />
+        ) : (
+          <ShoppingBag className="absolute inset-0 m-auto h-5 w-5 text-slate-300" />
+        )}
+      </div>
+
+      {/* info */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-slate-800">{product.name}</p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          {product.sku && <span className="font-mono text-[11px] text-slate-400">{product.sku}</span>}
+          {hidden && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">Đang ẩn</span>}
+          {outOfStock && <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600">Hết hàng</span>}
+        </div>
+      </div>
+
+      {/* actions */}
+      <div className="flex shrink-0 items-center gap-0.5">
+        <button type="button" disabled={busy || index === 0} onClick={onMoveUp} className={btn} aria-label="Đưa lên"><ArrowUp className="h-3.5 w-3.5" /></button>
+        <button type="button" disabled={busy || index === total - 1} onClick={onMoveDown} className={btn} aria-label="Đưa xuống"><ArrowDown className="h-3.5 w-3.5" /></button>
+        <button type="button" disabled={busy} onClick={onRemove} className={`${btn} text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700`} aria-label={`Gỡ ${product.name} khỏi khối`}><Trash2 className="h-3.5 w-3.5" /></button>
+      </div>
+    </div>
+  );
 }
 
 export default function ProductSectionManager() {
   const token = useAuthStore(state => state.token);
   const [sections, setSections] = useState<ProductSection[]>([]);
-  const [selected, setSelected] = useState<ProductSection | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [editor, setEditor] = useState<ProductSection | null | undefined>(undefined);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSectionId, setPickerSectionId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<ProductSection | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -45,13 +98,19 @@ export default function ProductSectionManager() {
     try {
       const result = await getProductSections(token);
       setSections(result.sections);
-      setSelected(current => current ? result.sections.find(item => item.id === current.id) || null : null);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Không tải được khối sản phẩm.'); }
-    finally { setLoading(false); }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Không tải được khối sản phẩm.');
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
 
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { if (!message) return; const timer = window.setTimeout(() => setMessage(''), 4000); return () => window.clearTimeout(timer); }, [message]);
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(''), 4000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
 
   const action = async (work: () => Promise<unknown>, success: string) => {
     if (!token || busy) return;
@@ -67,37 +126,193 @@ export default function ProductSectionManager() {
     setEditor(undefined);
   }, editor ? 'Đã cập nhật khối sản phẩm.' : 'Đã tạo khối sản phẩm.');
 
+  const toggleExpand = (id: number) =>
+    setExpanded(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+
   const moveSection = (section: ProductSection, direction: -1 | 1) => {
-    const index = sections.findIndex(item => item.id === section.id);
-    const next = index + direction;
-    if (index < 0 || next < 0 || next >= sections.length) return;
-    const ids = sections.map(item => item.id);
-    [ids[index], ids[next]] = [ids[next], ids[index]];
+    const idx = sections.findIndex(s => s.id === section.id);
+    const next = idx + direction;
+    if (idx < 0 || next < 0 || next >= sections.length) return;
+    const ids = sections.map(s => s.id);
+    [ids[idx], ids[next]] = [ids[next], ids[idx]];
     void action(() => reorderProductSections(token!, ids), 'Đã lưu thứ tự khối.');
   };
 
-  const moveProduct = (productId: number, direction: -1 | 1) => {
-    if (!selected) return;
-    const ids = selected.products.map(item => item.id);
-    const index = ids.indexOf(productId); const next = index + direction;
-    if (index < 0 || next < 0 || next >= ids.length) return;
-    [ids[index], ids[next]] = [ids[next], ids[index]];
-    void action(async () => { const result = await reorderSectionProducts(token!, selected.id, ids); setSelected(result.section); }, 'Đã lưu thứ tự sản phẩm.');
+  const moveProduct = (section: ProductSection, productId: number, direction: -1 | 1) => {
+    const ids = section.products.map(p => p.id);
+    const idx = ids.indexOf(productId); const next = idx + direction;
+    if (idx < 0 || next < 0 || next >= ids.length) return;
+    [ids[idx], ids[next]] = [ids[next], ids[idx]];
+    void action(() => reorderSectionProducts(token!, section.id, ids), 'Đã lưu thứ tự sản phẩm.');
   };
 
+  const pickerSection = pickerSectionId != null ? sections.find(s => s.id === pickerSectionId) ?? null : null;
+
   if (!token) return null;
-  return <section>
-    <AdminPageHeader title="Khối sản phẩm" description="Tạo và sắp xếp các nhóm sản phẩm hiển thị trên trang Home." action={<button type="button" onClick={() => setEditor(null)} className="ui-button ui-button--primary inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"><Plus className="h-4 w-4" />Tạo khối sản phẩm</button>} />
-    {message && <p role="status" className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{message}</p>}
-    {error && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-    {selected ? <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.03] sm:p-6">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div><button type="button" onClick={() => setSelected(null)} className="ui-link ui-link--back mb-3 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700"><ArrowLeft className="h-4 w-4" />Tất cả khối</button><h2 className="text-xl font-semibold text-slate-900">{selected.name}</h2><div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"><span className={selected.isActive ? 'font-semibold text-green-700' : 'font-semibold text-slate-500'}>{selected.isActive ? 'Active' : 'Inactive'}</span><span className="text-slate-500">{selected.products.length} sản phẩm</span><span className={sectionVisibility(selected).className}>{sectionVisibility(selected).label}</span></div>{selected.subtitle && <p className="mt-1 text-sm text-slate-500">{selected.subtitle}</p>}</div><button type="button" onClick={() => setPickerOpen(true)} className="ui-button ui-button--primary inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white"><Plus className="h-4 w-4" />Thêm sản phẩm</button></div>
-      {!selected.products.length ? <p className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Khối chưa có sản phẩm. Khối trống sẽ không hiển thị trên Home.</p> : <div className="space-y-2">{selected.products.map((product, index) => <div key={product.id} className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-3"><span className="w-6 text-center text-sm font-semibold text-slate-400">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-slate-800">{product.name}</p><p className="text-xs text-slate-500">{product.price.toLocaleString('vi-VN')}đ</p></div><button type="button" className={buttonClass} disabled={busy || index === 0} onClick={() => moveProduct(product.id, -1)} aria-label={`Đưa ${product.name} lên`}><ArrowUp className="h-4 w-4" /></button><button type="button" className={buttonClass} disabled={busy || index === selected.products.length - 1} onClick={() => moveProduct(product.id, 1)} aria-label={`Đưa ${product.name} xuống`}><ArrowDown className="h-4 w-4" /></button><button type="button" className={`${buttonClass} text-red-600`} disabled={busy} onClick={() => void action(async () => { const result = await removeProductFromSection(token!, selected.id, product.id); setSelected(result.section); }, 'Đã xóa sản phẩm khỏi khối.')} aria-label={`Xóa ${product.name} khỏi khối`}><Trash2 className="h-4 w-4" /></button></div>)}</div>}
-    </section> : <>
-      {loading ? <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm text-slate-500">Đang tải khối sản phẩm...</div> : !sections.length ? <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">Chưa có khối sản phẩm.</div> : <div className="space-y-3">{sections.map((section, index) => <article key={section.id} className="ui-card flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-900/[0.03] sm:p-5"><div className="min-w-0 flex-1"><button type="button" onClick={() => setSelected(section)} className="ui-link truncate text-left font-semibold text-slate-900 hover:text-primary-600">{section.name}</button><p className="mt-1 text-sm text-slate-500">{section.products.length} sản phẩm · Thứ tự {section.sortOrder} · <span className={section.isActive ? 'text-green-700' : 'text-slate-400'}>{section.isActive ? 'Active' : 'Inactive'}</span></p><p className={`mt-1 text-xs font-medium ${sectionVisibility(section).className}`}>{sectionVisibility(section).label}</p></div><div className="flex flex-wrap gap-2"><button type="button" className={buttonClass} onClick={() => setSelected(section)}>Chi tiết</button><button type="button" className={buttonClass} onClick={() => setEditor(section)}><Edit3 className="h-3.5 w-3.5" />Sửa</button><button type="button" className={buttonClass} disabled={busy} onClick={() => void action(() => setProductSectionStatus(token!, section.id, !section.isActive), section.isActive ? 'Đã tắt khối sản phẩm.' : 'Đã bật khối sản phẩm.')}>{section.isActive ? 'Tắt' : 'Bật'}</button><button type="button" className={`${buttonClass} text-red-600`} disabled={busy} onClick={() => setDeleting(section)}><Trash2 className="h-3.5 w-3.5" />Xóa</button><button type="button" className={buttonClass} disabled={busy || index === 0} onClick={() => moveSection(section, -1)} aria-label={`Đưa ${section.name} lên`}><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" className={buttonClass} disabled={busy || index === sections.length - 1} onClick={() => moveSection(section, 1)} aria-label={`Đưa ${section.name} xuống`}><ArrowDown className="h-3.5 w-3.5" /></button></div></article>)}</div>}
-    </>}
-    {editor !== undefined && <ProductSectionForm section={editor || undefined} busy={busy} onClose={() => setEditor(undefined)} onSave={save} />}
-    {pickerOpen && selected && <ProductPicker token={token} existingIds={selected.products.map(product => product.id)} busy={busy} onClose={() => setPickerOpen(false)} onAdd={ids => void action(async () => { const result = await addProductsToSection(token!, selected.id, ids); setSelected(result.section); setPickerOpen(false); }, 'Đã thêm sản phẩm vào khối.')} />}
-    {deleting && <Modal title="Xóa khối sản phẩm" onClose={() => setDeleting(null)} busy={busy}><p className="text-slate-600">Xóa “{deleting.name}”? Sản phẩm gốc sẽ không bị xóa.</p><div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => setDeleting(null)} className="ui-button ui-button--neutral rounded-lg border px-4 py-2.5">Hủy</button><button type="button" onClick={() => void action(async () => { await deleteProductSection(token!, deleting.id); setDeleting(null); }, 'Đã xóa khối sản phẩm.')} className="ui-button ui-button--danger rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white">Xóa khối</button></div></Modal>}
-  </section>;
+
+  return (
+    <section>
+      <AdminPageHeader
+        title="Khối sản phẩm"
+        description="Tạo và sắp xếp các nhóm sản phẩm hiển thị trên trang Home."
+        action={
+          <button type="button" onClick={() => setEditor(null)} className="ui-button ui-button--primary inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">
+            <Plus className="h-4 w-4" />Tạo khối sản phẩm
+          </button>
+        }
+      />
+      <AdminFeedback message={message} error={error} />
+
+      {loading ? (
+        <div role="status" className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          Đang tải khối sản phẩm...
+        </div>
+      ) : !sections.length ? (
+        <EmptyState
+          icon={LayoutGrid}
+          title="Chưa có khối sản phẩm."
+          description="Khối sản phẩm là các nhóm hiển thị trên trang chủ."
+          action={
+            <button type="button" onClick={() => setEditor(null)} className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700">
+              Tạo khối sản phẩm
+            </button>
+          }
+        />
+      ) : (
+        <div className="space-y-3">
+          {sections.map((section, index) => {
+            const isOpen = expanded.has(section.id);
+            const vis = sectionVisibility(section);
+            return (
+              <article key={section.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/[0.03]">
+                {/* ── Section header ── */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                  {/* expand toggle + info */}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(section.id)}
+                    aria-expanded={isOpen}
+                    aria-label={isOpen ? 'Thu gọn khối' : 'Mở rộng khối'}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
+                    {isOpen
+                      ? <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+                      : <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />}
+                    <span className="truncate font-semibold text-slate-800">{section.name}</span>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                      {section.products.length}
+                    </span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${section.isActive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {section.isActive ? 'Active' : 'Ẩn'}
+                    </span>
+                    <span className={`hidden truncate text-xs sm:block ${vis.cls}`}>{vis.label}</span>
+                  </button>
+
+                  {/* action buttons */}
+                  <div className={adminActionGroupClass}>
+                    <button type="button" className={btn} onClick={() => setEditor(section)} aria-label="Sửa khối">
+                      <Edit3 className="h-3.5 w-3.5" />Sửa
+                    </button>
+                    <button type="button" className={btn} disabled={busy} onClick={() => void action(() => setProductSectionStatus(token!, section.id, !section.isActive), section.isActive ? 'Đã tắt khối.' : 'Đã bật khối.')}>
+                      {section.isActive ? <><EyeOff className="h-3.5 w-3.5" />Tắt</> : <><Eye className="h-3.5 w-3.5" />Bật</>}
+                    </button>
+                    <button type="button" className={`${btn} text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700`} disabled={busy} onClick={() => setDeleting(section)} aria-label="Xóa khối">
+                      <Trash2 className="h-3.5 w-3.5" />Xóa
+                    </button>
+                    <button type="button" className={btn} disabled={busy || index === 0} onClick={() => moveSection(section, -1)} aria-label="Đưa khối lên">
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" className={btn} disabled={busy || index === sections.length - 1} onClick={() => moveSection(section, 1)} aria-label="Đưa khối xuống">
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* ── Expanded product list ── */}
+                {isOpen && (
+                  <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-xs text-slate-500">
+                        {section.products.length
+                          ? `${section.products.length} sản phẩm trong khối`
+                          : 'Khối chưa có sản phẩm — sẽ không hiển thị trên trang chủ.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setPickerSectionId(section.id)}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary-700"
+                      >
+                        <Plus className="h-3.5 w-3.5" />Thêm sản phẩm
+                      </button>
+                    </div>
+
+                    {!section.products.length ? (
+                      <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-200 py-6 text-sm text-slate-400">
+                        <PackageOpen className="h-5 w-5" />
+                        <span>Chưa có sản phẩm</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {section.products.map((product, pIdx) => (
+                          <ProductRow
+                            key={product.id}
+                            product={product}
+                            index={pIdx}
+                            total={section.products.length}
+                            busy={busy}
+                            onMoveUp={() => moveProduct(section, product.id, -1)}
+                            onMoveDown={() => moveProduct(section, product.id, 1)}
+                            onRemove={() => void action(
+                              () => removeProductFromSection(token!, section.id, product.id),
+                              'Đã gỡ sản phẩm khỏi khối.',
+                            )}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {editor !== undefined && (
+        <ProductSectionForm section={editor || undefined} busy={busy} onClose={() => setEditor(undefined)} onSave={save} />
+      )}
+
+      {pickerSection && (
+        <ProductPicker
+          token={token}
+          existingIds={pickerSection.products.map(p => p.id)}
+          busy={busy}
+          onClose={() => setPickerSectionId(null)}
+          onAdd={ids => void action(async () => {
+            await addProductsToSection(token!, pickerSection.id, ids);
+            setPickerSectionId(null);
+          }, 'Đã thêm sản phẩm vào khối.')}
+        />
+      )}
+
+      {deleting && (
+        <Modal title="Xóa khối sản phẩm" onClose={() => setDeleting(null)} busy={busy}>
+          <p className="text-slate-600">
+            Xóa khối <strong>"{deleting.name}"</strong>? Các sản phẩm trong khối sẽ không bị xóa khỏi cơ sở dữ liệu.
+          </p>
+          <div className="mt-6 flex justify-end gap-3">
+            <button type="button" onClick={() => setDeleting(null)} disabled={busy} className="ui-button ui-button--neutral rounded-lg border border-slate-200 px-4 py-2.5 text-sm">Hủy</button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void action(async () => { await deleteProductSection(token!, deleting.id); setDeleting(null); }, 'Đã xóa khối sản phẩm.')}
+              className="ui-button ui-button--danger rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {busy ? 'Đang xóa...' : 'Xóa khối'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </section>
+  );
 }

@@ -65,8 +65,8 @@ require('../../backend/node_modules/dotenv').config({ path: path.resolve(__dirna
       const dialog = page.getByRole('dialog');
       const name = `${marker}-${suffix}`;
       await dialog.getByLabel('Tên sản phẩm *', { exact: true }).fill(name);
-      await dialog.getByLabel('SKU *', { exact: true }).fill(name);
-      await dialog.getByLabel('Giá bán *', { exact: true }).fill('18090000');
+      await dialog.locator('select').first().selectOption({ index: 1 });
+      await dialog.getByLabel('Giá bán (sau giảm) (₫) *', { exact: true }).fill('18090000');
       return { dialog, name };
     }
     async function save(dialog, method = 'POST', expectedStatus = 201) {
@@ -81,7 +81,7 @@ require('../../backend/node_modules/dotenv').config({ path: path.resolve(__dirna
     }
     async function edit(product) {
       await page.goto(base + '/admin/products');
-      await row(product.name).getByRole('button', { name: 'Sửa', exact: true }).click();
+      await row(product.name).getByRole('button', { name: `Sửa ${product.name}`, exact: true }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('Tên sản phẩm *', { exact: true }).waitFor();
       return dialog;
@@ -124,7 +124,7 @@ require('../../backend/node_modules/dotenv').config({ path: path.resolve(__dirna
     assert.equal(await prisma.productImage.count({ where: { productId: product.id } }), 1);
     await page.reload();
     await imageLoaded(row(product.name).locator('img'), product.primaryImage);
-    await row(product.name).getByRole('button', { name: 'Xem', exact: true }).click();
+    await row(product.name).getByRole('button', { name: `Xem chi tiết ${product.name}`, exact: true }).click();
     await imageLoaded(page.getByRole('dialog').locator('img'), product.primaryImage);
     await page.getByRole('dialog').getByRole('button', { name: 'Đóng hộp thoại', exact: true }).click();
     await page.screenshot({ path: path.join(directory, 'admin-reloaded.png'), fullPage: true });

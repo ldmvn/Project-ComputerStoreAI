@@ -35,6 +35,7 @@ export function validateSection(input) {
     viewAllUrl: viewAllUrl || `/customer/products?section=${slug}`,
     sortOrder: integer(input.sortOrder ?? 0, 'Thứ tự'),
     isActive: input.isActive === false || input.isActive === 'false' ? false : true,
+    showHighlightSpecs: input.showHighlightSpecs === false || input.showHighlightSpecs === 'false' ? false : true,
   };
 }
 

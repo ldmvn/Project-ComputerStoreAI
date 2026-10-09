@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { Search } from 'lucide-react';
@@ -35,7 +35,7 @@ export default function ProductPicker({ token, existingIds, busy, onClose, onAdd
     <div className="mt-4 max-h-72 overflow-y-auto rounded-lg border border-slate-200">
       {loading ? <p className="p-4 text-sm text-slate-500">Đang tải sản phẩm...</p> : products.length ? products.map(product => {
         const inSection = existingIds.includes(product.id);
-        return <label key={product.id} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-0 ${inSection ? 'bg-slate-50 opacity-60' : 'hover:bg-orange-50'}`}><input type="checkbox" disabled={inSection} checked={inSection || selected.includes(product.id)} onChange={() => toggle(product.id)} className="h-4 w-4" /><span className="min-w-0 flex-1 truncate text-sm text-slate-700">{product.name}</span><span className="text-sm font-semibold text-slate-600">{product.price.toLocaleString('vi-VN')}đ</span></label>;
+        return <label key={product.id} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-0 ${inSection ? 'bg-slate-50 opacity-60' : 'hover:bg-primary-50'}`}><input type="checkbox" disabled={inSection} checked={inSection || selected.includes(product.id)} onChange={() => toggle(product.id)} className="h-4 w-4" /><span className="min-w-0 flex-1 truncate text-sm text-slate-700">{product.name}</span><span className="text-sm font-semibold text-slate-600">{product.price.toLocaleString('vi-VN')}đ</span></label>;
       }) : <p className="p-4 text-sm text-slate-500">Không tìm thấy sản phẩm.</p>}
     </div>
     <div className="mt-5 flex items-center justify-between gap-3"><span className="text-sm text-slate-500">Đã chọn {selected.length} sản phẩm</span><button type="button" disabled={busy || !selected.length} onClick={() => onAdd(selected)} className="ui-button ui-button--primary rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Đang thêm...' : 'Thêm vào khối'}</button></div>

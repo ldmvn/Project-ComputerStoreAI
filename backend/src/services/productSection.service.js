@@ -1,7 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { productSectionError } from '../validators/productSection.validator.js';
 
-const productSelect = { id: true, slug: true, name: true, price: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { id: 'asc' }], select: { imageUrl: true }, take: 1 } };
+const productSelect = { id: true, slug: true, sku: true, name: true, price: true, isActive: true, stockQuantity: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { id: 'asc' }], select: { imageUrl: true }, take: 1 } };
 const homeProductSelect = {
   ...productSelect,
   originalPrice: true,
@@ -37,14 +37,18 @@ function serialize(section) {
     viewAllUrl: section.viewAllUrl,
     sortOrder: section.sortOrder,
     isActive: section.isActive,
+    showHighlightSpecs: section.showHighlightSpecs ?? true,
     createdAt: section.createdAt,
     updatedAt: section.updatedAt,
     products: section.items.map(item => ({
       id: item.product.id,
       slug: item.product.slug,
+      sku: item.product.sku,
       name: item.product.name,
       price: item.product.price,
       originalPrice: item.product.originalPrice,
+      isActive: item.product.isActive,
+      stockQuantity: item.product.stockQuantity,
       specifications: item.product.specifications,
       highlightSpecs: item.product.highlightSpecs,
       primaryImage: item.product.images?.[0]?.imageUrl || null,

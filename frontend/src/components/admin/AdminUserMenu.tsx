@@ -33,11 +33,11 @@ export default function AdminUserMenu({ user }: { user: AuthUser }) {
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="ui-header-action inline-flex min-h-10 max-w-[min(42vw,220px)] items-center gap-2 rounded-xl px-1.5 text-left text-white transition-colors duration-200 hover:bg-white/15 sm:px-2"
-        aria-label={`Tài khoản: ${user.fullName}`}
         aria-expanded={open}
         aria-controls={panelId}
       >
-        <span className="ui-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-semibold ring-1 ring-white/25">
+        <span className="sr-only">Tài khoản</span>
+        <span aria-hidden="true" className="ui-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-semibold ring-1 ring-white/25">
           {user.fullName.charAt(0).toUpperCase()}
         </span>
         <span className="hidden min-w-0 max-w-32 truncate text-sm font-medium lg:inline xl:max-w-44">{user.fullName}</span>

@@ -2,16 +2,21 @@ import { prisma } from '../config/prisma.js';
 import { menuError, safeMenuUrl } from '../validators/megaMenu.validator.js';
 
 const orderBy = [{ sortOrder: 'asc' }, { id: 'asc' }];
-const include = { groups: { orderBy, include: { items: { orderBy, include: { category: true, brand: true } } } }, brands: { orderBy: [{ sortOrder: 'asc' }, { brandId: 'asc' }], include: { brand: true } } };
+const include = { groups: { orderBy, include: { items: { orderBy, include: { category: true, brand: true, attribute: true, attributeOption: true } } } }, brands: { orderBy: [{ sortOrder: 'asc' }, { brandId: 'asc' }], include: { brand: true } } };
 const productUrl = params => `/customer/products?${new URLSearchParams(params)}`;
 
 export async function attributeOptions(db = prisma) {
-  const rows = await db.productSpecification.findMany({ where: { product: { isDeleted: false } }, distinct: ['name', 'value'], select: { name: true, value: true }, orderBy: [{ name: 'asc' }, { value: 'asc' }] });
-  const options = new Map();
-  for (const row of rows) options.set(row.name, [...(options.get(row.name) || []), row.value]);
-  return [...options].map(([name, values]) => ({ name, values }));
+  return db.attribute.findMany({ where: { isActive: true, type: { in: ['SELECT', 'MULTI_SELECT'] } }, select: { id: true, name: true, slug: true, type: true, values: { where: { isActive: true }, orderBy, select: { id: true, value: true } } }, orderBy });
 }
-export function itemHref(item, rootSlug, activeCategoryIds, specs) {
+function hasValidReference(item, activeCategoryIds) {
+  if (item.type === 'CATEGORY') return Boolean(item.category?.isActive && activeCategoryIds.has(item.categoryId));
+  if (item.type === 'BRAND') return Boolean(item.brand?.isActive);
+  if (item.type === 'ATTRIBUTE_FILTER') return Boolean(item.attributeId && item.attributeValueId && item.attribute?.isActive && item.attributeOption?.isActive && item.attributeOption.attributeId === item.attributeId);
+  if (item.type === 'CUSTOM_URL') return safeMenuUrl(item.customUrl);
+  return item.type === 'PRICE_FILTER';
+}
+
+export function itemHref(item, rootSlug, activeCategoryIds, attributeCounts) {
   const params = { category: rootSlug };
   if (item.type === 'CATEGORY') return item.category?.isActive && activeCategoryIds.has(item.categoryId) ? productUrl({ category: item.category.slug }) : null;
   if (item.type === 'BRAND') return item.brand?.isActive ? productUrl({ ...params, brand: item.brand.slug }) : null;
@@ -20,13 +25,13 @@ export function itemHref(item, rootSlug, activeCategoryIds, specs) {
     if (item.maxPrice !== null) params.maxPrice = String(item.maxPrice);
     return productUrl(params);
   }
-  if (item.type === 'ATTRIBUTE_FILTER') return specs.has(JSON.stringify([item.attributeName, item.attributeValue])) ? productUrl({ ...params, attribute: item.attributeName, attributeValue: item.attributeValue }) : null;
+  if (item.type === 'ATTRIBUTE_FILTER') return hasValidReference(item, activeCategoryIds) && (attributeCounts.get(JSON.stringify([item.attributeId, item.attributeValueId])) || 0) > 0 ? productUrl({ ...params, attribute: item.attribute.slug, attributeValue: String(item.attributeValueId) }) : null;
   return item.type === 'CUSTOM_URL' && safeMenuUrl(item.customUrl) ? item.customUrl : null;
 }
 async function visibility(db) {
   const [categories, specs] = await Promise.all([
     db.category.findMany({ select: { id: true, parentId: true, isActive: true } }),
-    db.productSpecification.findMany({ where: { product: { isDeleted: false, isActive: true } }, distinct: ['name', 'value'], select: { name: true, value: true } }),
+    db.productAttributeValue.groupBy({ by: ['attributeId', 'attributeValueId'], where: { product: { isDeleted: false, isActive: true }, attributeValueId: { not: null } }, _count: { _all: true } }),
   ]);
   const byId = new Map(categories.map(c => [c.id, c]));
   const valid = new Set();
@@ -38,14 +43,14 @@ async function visibility(db) {
       current = byId.get(current.parentId);
     }
   }
-  return { valid, specs: new Set(specs.map(s => JSON.stringify([s.name, s.value]))) };
+  return { valid, attributeCounts: new Map(specs.map(row => [JSON.stringify([row.attributeId, row.attributeValueId]), row._count._all])) };
 }
 export async function getAdminMenu(categoryId) {
   const category = await prisma.category.findUnique({ where: { id: categoryId } });
   if (!category || category.parentId !== null) throw menuError('Chọn danh mục cấp chính còn tồn tại.', 404);
   const [menu, state] = await Promise.all([prisma.megaMenu.findUnique({ where: { categoryId }, include }), visibility(prisma)]);
   if (!menu) return { category, menu: null };
-  return { category, menu: { ...menu, groups: menu.groups.map(g => ({ ...g, items: g.items.map(item => ({ ...item, invalid: !itemHref(item, category.slug, state.valid, state.specs) })) })) } };
+  return { category, menu: { ...menu, groups: menu.groups.map(g => ({ ...g, items: g.items.map(item => ({ ...item, productCount: item.type === 'ATTRIBUTE_FILTER' ? (state.attributeCounts.get(JSON.stringify([item.attributeId, item.attributeValueId])) || 0) : undefined, invalid: !hasValidReference(item, state.valid) })) })) } };
 }
 export async function saveMenu(categoryId, isActive, brandIds) {
   return prisma.$transaction(async tx => {
@@ -73,9 +78,14 @@ export async function saveItem(groupId, id, data) {
       if (id && !await tx.megaMenuItem.findFirst({ where: { id, groupId } })) throw menuError('Mục không tồn tại.', 404);
       if (data.categoryId && !await tx.category.findUnique({ where: { id: data.categoryId } })) throw menuError('Danh mục không tồn tại.');
       if (data.brandId && !await tx.brand.findUnique({ where: { id: data.brandId } })) throw menuError('Thương hiệu không tồn tại.');
-      if (data.type === 'ATTRIBUTE_FILTER' && !await tx.productSpecification.findFirst({ where: { name: data.attributeName, value: data.attributeValue, product: { isDeleted: false } } })) throw menuError('Cặp thuộc tính/giá trị không tồn tại trong sản phẩm.');
+      if (data.type === 'ATTRIBUTE_FILTER') {
+        const value = await tx.attributeValue.findFirst({ where: { id: data.attributeValueId, attributeId: data.attributeId, isActive: true, attribute: { isActive: true } }, include: { attribute: true } });
+        if (!value) throw menuError('Cặp thuộc tính/giá trị không tồn tại hoặc đang bị tắt.');
+        data.attributeName = value.attribute.name;
+        data.attributeValue = value.value;
+      }
       const target = { type: data.type };
-      for (const field of ['categoryId', 'brandId', 'attributeName', 'attributeValue', 'minPrice', 'maxPrice', 'customUrl']) target[field] = data[field];
+      for (const field of ['categoryId', 'brandId', 'attributeId', 'attributeValueId', 'attributeName', 'attributeValue', 'minPrice', 'maxPrice', 'customUrl']) target[field] = data[field];
       if (await tx.megaMenuItem.findFirst({ where: { groupId, ...target, ...(id ? { id: { not: id } } : {}) } })) throw menuError('Liên kết này đã có trong nhóm.', 409);
       return id ? tx.megaMenuItem.update({ where: { id }, data }) : tx.megaMenuItem.create({ data: { ...data, groupId } });
     }, { isolationLevel: 'Serializable' });
@@ -89,6 +99,6 @@ export async function publicMenus(slug) {
   ]);
   return categories.map(category => {
     const menu = category.megaMenu?.isActive ? category.megaMenu : null;
-    return { category: { id: category.id, name: category.name, slug: category.slug, icon: category.icon, href: productUrl({ category: category.slug }), children: category.children }, groups: (menu?.groups || []).filter(g => g.isActive).map(g => ({ id: g.id, title: g.title, columnSpan: g.columnSpan, items: g.items.filter(i => i.isActive).map(i => ({ id: i.id, label: i.label, type: i.type, href: itemHref(i, category.slug, state.valid, state.specs) })).filter(i => i.href) })).filter(g => g.items.length), brands: (menu?.brands || []).filter(b => b.brand.isActive).map(({ brand }) => ({ id: brand.id, name: brand.name, slug: brand.slug, logoUrl: brand.logoUrl, href: productUrl({ category: category.slug, brand: brand.slug }) })) };
+    return { category: { id: category.id, name: category.name, slug: category.slug, icon: category.icon, href: productUrl({ category: category.slug }), children: category.children }, groups: (menu?.groups || []).filter(g => g.isActive).map(g => ({ id: g.id, title: g.title, columnSpan: g.columnSpan, items: g.items.filter(i => i.isActive).map(i => ({ id: i.id, label: i.label, type: i.type, href: itemHref(i, category.slug, state.valid, state.attributeCounts) })).filter(i => i.href) })).filter(g => g.items.length), brands: (menu?.brands || []).filter(b => b.brand.isActive).map(({ brand }) => ({ id: brand.id, name: brand.name, slug: brand.slug, logoUrl: brand.logoUrl, href: productUrl({ category: category.slug, brand: brand.slug }) })) };
   });
 }
