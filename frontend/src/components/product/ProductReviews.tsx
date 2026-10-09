@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 /* eslint-disable @next/next/no-img-element */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Camera, Loader2, Star, X } from 'lucide-react';
@@ -36,7 +36,7 @@ function StarRating({ value, onChange, readOnly = false, size = 18 }: { value: n
             type="button"
             disabled={!interactive}
             onClick={() => interactive && onChange?.(star)}
-            className={`flex h-7 w-7 items-center justify-center rounded transition ${interactive ? 'hover:bg-orange-50 cursor-pointer' : 'cursor-default'}`}
+            className={`flex h-7 w-7 items-center justify-center rounded transition ${interactive ? 'hover:bg-primary-50 cursor-pointer' : 'cursor-default'}`}
             aria-label={`${star} sao`}
             aria-pressed={filled}
           >
@@ -228,7 +228,7 @@ export default function ProductReviews({ slug, productId, initialSummary }: Prop
               role="tab"
               aria-selected={isActive}
               onClick={() => setFilter(option.id)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${isActive ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:text-orange-600'}`}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${isActive ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600 hover:border-primary-200 hover:text-primary-600'}`}
             >
               {option.label}
             </button>
@@ -243,7 +243,7 @@ export default function ProductReviews({ slug, productId, initialSummary }: Prop
             Đang tải đánh giá…
           </div>
         ) : error ? (
-          <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         ) : items.length === 0 ? (
           <p className="py-6 text-center text-sm text-slate-500">Chưa có đánh giá nào phù hợp với bộ lọc.</p>
         ) : (
@@ -278,12 +278,12 @@ export default function ProductReviews({ slug, productId, initialSummary }: Prop
             rows={3}
             maxLength={2000}
             placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm…"
-            className="mt-1 block w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100"
+            className="mt-1 block w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
           />
           <span className="mt-1 block text-right text-[11px] text-slate-400">{content.length}/2000</span>
         </label>
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-orange-300 hover:text-orange-600 ${files.length >= MAX_REVIEW_IMAGES ? 'pointer-events-none opacity-50' : ''}`}>
+          <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-primary-300 hover:text-primary-600 ${files.length >= MAX_REVIEW_IMAGES ? 'pointer-events-none opacity-50' : ''}`}>
             <Camera size={14} aria-hidden="true" />
             Đính kèm ảnh ({files.length}/{MAX_REVIEW_IMAGES})
             <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
@@ -297,10 +297,10 @@ export default function ProductReviews({ slug, productId, initialSummary }: Prop
             </span>
           ))}
         </div>
-        {submitError && <p role="alert" className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{submitError}</p>}
-        {submitSuccess && <p role="status" className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{submitSuccess}</p>}
+        {submitError && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{submitError}</p>}
+        {submitSuccess && <p role="status" className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">{submitSuccess}</p>}
         <div className="mt-3 flex justify-end">
-          <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60">
+          <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">
             {submitting && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
             Gửi đánh giá
           </button>

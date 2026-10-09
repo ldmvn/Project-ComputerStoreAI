@@ -2,6 +2,7 @@ import { prisma } from '../config/prisma.js';
 import { Prisma } from '@prisma/client';
 import { productError } from '../validators/product.validator.js';
 import { reviewError } from '../validators/productReview.validator.js';
+import { removeReviewImage } from './reviewMedia.service.js';
 
 async function getDistribution(productId) {
   const rows = await prisma.productReview.groupBy({
@@ -126,4 +127,27 @@ export async function createProductReview(slug, userId, payload, images) {
     createdAt: review.createdAt,
     author: review.authorId ? { id: review.authorId, fullName: review.authorFullName, avatarUrl: review.authorAvatarUrl } : null,
   };
+}
+
+export async function deleteProductReview(slug, rawReviewId, userId) {
+  const reviewId = Number(rawReviewId);
+  if (!Number.isSafeInteger(reviewId) || reviewId <= 0) throw reviewError('Đánh giá không hợp lệ.');
+
+  const deletedImages = await prisma.$transaction(async tx => {
+    const rows = await tx.$queryRaw`
+      SELECT r.id, r.images
+      FROM ProductReview r
+      INNER JOIN Product p ON p.id = r.productId
+      WHERE r.id = ${reviewId} AND r.userId = ${userId} AND p.slug = ${slug}
+      LIMIT 1
+    `;
+    if (!rows[0]) throw reviewError('Không tìm thấy đánh giá hoặc bạn không có quyền xóa.', 404);
+    await tx.productReview.delete({ where: { id: reviewId } });
+    return parseImages(rows[0].images);
+  });
+
+  if (!deletedImages.length) return;
+  const remaining = await prisma.productReview.findMany({ where: { images: { not: null } }, select: { images: true } });
+  const referenced = new Set(remaining.flatMap(row => parseImages(row.images)));
+  await Promise.all(deletedImages.filter(url => !referenced.has(url)).map(removeReviewImage));
 }

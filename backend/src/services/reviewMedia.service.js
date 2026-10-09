@@ -34,22 +34,26 @@ export async function discardReviewTemp(files = []) {
   await Promise.all(files.map(file => file?.path ? unlink(file.path).catch(() => {}) : Promise.resolve()));
 }
 
-export async function saveReviewImages(files = []) {
-  await mkdir(reviewMediaDirectory, { recursive: true });
+export async function saveReviewImages(files = [], userId) {
+  if (!Number.isSafeInteger(userId) || userId <= 0) throw reviewError('Invalid authenticated user.', 401);
+  const userDirectoryName = `user-${userId}`;
+  const userDirectory = path.join(reviewMediaDirectory, userDirectoryName);
+  await mkdir(userDirectory, { recursive: true });
   const saved = [];
   try {
     for (const file of files) {
       const detected = await fileTypeFromFile(file.path);
       if (!detected || !allowed[file.mimetype]?.includes(path.extname(file.originalname).toLowerCase()) || detected.mime !== file.mimetype) throw reviewError('Nội dung ảnh không khớp MIME khai báo.');
       const key = `${randomUUID()}.webp`;
-      const destination = path.join(reviewMediaDirectory, key);
+      const storageKey = `${userDirectoryName}/${key}`;
+      const destination = path.join(userDirectory, key);
       try {
         await sharp(file.path, { limitInputPixels: 40000000, failOn: 'error' }).rotate().webp({ quality: 88 }).toFile(destination);
       } catch {
-        await removeReviewImage(key);
+        await removeReviewImage(storageKey);
         throw reviewError('Ảnh không hợp lệ hoặc vượt giới hạn 40 triệu pixel.');
       }
-      saved.push({ storageKey: key, imageUrl: `${(process.env.MEDIA_PUBLIC_URL || '/media').replace(/\/$/, '')}/reviews/${key}` });
+      saved.push({ storageKey, imageUrl: `${(process.env.MEDIA_PUBLIC_URL || '/media').replace(/\/$/, '')}/reviews/${userDirectoryName}/${key}` });
     }
     return saved;
   } catch (error) {
@@ -59,6 +63,7 @@ export async function saveReviewImages(files = []) {
 }
 
 export async function removeReviewImage(key) {
-  if (!/^[a-f0-9-]+\.webp$/.test(key || '')) return;
-  await unlink(path.join(reviewMediaDirectory, key)).catch(error => { if (error.code !== 'ENOENT') console.error('Cannot remove review image:', error.code); });
+  const match = String(key || '').replaceAll('\\', '/').match(/(?:^|\/reviews\/)((?:user-\d+\/)?[a-f0-9-]+\.webp)$/i);
+  if (!match) return;
+  await unlink(path.join(reviewMediaDirectory, ...match[1].split('/'))).catch(error => { if (error.code !== 'ENOENT') console.error('Cannot remove review image:', error.code); });
 }

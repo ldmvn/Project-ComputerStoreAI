@@ -3,20 +3,29 @@ import { productError } from '../validators/product.validator.js';
 import { removeProductImage } from './productMedia.service.js';
 import { resolveBrandFilter } from './brand.service.js';
 import { getProductStatistics } from './productStatistics.service.js';
+import { generateProductSkuForCategoryId } from './productSku.service.js';
 
 const imageOrder = [{ isPrimary: 'desc' }, { sortOrder: 'asc' }, { id: 'asc' }];
-const detailInclude = { images: { orderBy: imageOrder }, specifications: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }, highlightSpecs: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }, brandRecord: true, categoryRecord: { select: { id: true, name: true, slug: true } } };
+const detailInclude = { images: { orderBy: imageOrder }, specifications: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }, attributeValues: { include: { attribute: true, attributeValue: true }, orderBy: { id: 'asc' } }, highlightSpecs: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] }, brandRecord: true, categoryRecord: { select: { id: true, name: true, slug: true } } };
 const listInclude = { images: { orderBy: imageOrder, take: 1 }, brandRecord: true };
 
 function serialize(product, detail = false, publicView = false) {
   const primary = product.images?.find(image => image.isPrimary) || product.images?.[0] || null;
+  const normalized = new Map();
+  for (const row of product.attributeValues || []) {
+    const current = normalized.get(row.attributeId) || { id: row.attributeId, name: row.attribute.name, slug: row.attribute.slug, type: row.attribute.type, sortOrder: row.attribute.sortOrder, valueIds: [], values: [] };
+    if (row.attributeValue) { current.valueIds.push(row.attributeValue.id); current.values.push(row.attributeValue.value); }
+    else if (row.valueText !== null) current.values.push(row.attribute.type === 'BOOLEAN' ? (row.valueText === 'true' ? 'Có' : 'Không') : row.valueText);
+    normalized.set(row.attributeId, current);
+  }
+  const productAttributes = [...normalized.values()].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
   return {
     id: product.id, name: product.name, slug: product.slug, sku: product.sku, category: product.categoryRecord?.name || product.category, categoryId: product.categoryId, categoryInfo: product.categoryRecord || null, brandId: product.brandId, brand: product.brandRecord?.name || product.brand, brandInfo: product.brandRecord ? { id: product.brandRecord.id, name: product.brandRecord.name, slug: product.brandRecord.slug, logoUrl: product.brandRecord.logoUrl } : null,
     shortDescription: product.shortDescription, description: detail ? product.description : undefined, price: product.price,
     originalPrice: product.originalPrice, costPrice: detail && !publicView ? product.costPrice : undefined, stockQuantity: product.stockQuantity,
     lowStockThreshold: product.lowStockThreshold, isActive: product.isActive, isDeleted: product.isDeleted,
     stockStatus: product.stockQuantity === 0 ? 'OUT_OF_STOCK' : product.stockQuantity <= product.lowStockThreshold ? 'LOW_STOCK' : 'IN_STOCK',
-    primaryImage: primary?.imageUrl || null, images: detail ? product.images : undefined, specifications: detail ? product.specifications : undefined, highlightSpecs: detail ? product.highlightSpecs : undefined,
+    primaryImage: primary?.imageUrl || null, images: detail ? product.images : undefined, customSpecifications: detail ? (product.specifications || []) : undefined, productAttributes: detail ? productAttributes : undefined, highlightSpecs: detail ? product.highlightSpecs : undefined,
     createdAt: product.createdAt, updatedAt: product.updatedAt,
   };
 }
@@ -39,7 +48,22 @@ async function whereForQuery(filters, resolvedBrand) {
     ? { OR: [{ brandId: resolvedBrand.id }, { brandId: null, brand: resolvedBrand.name }] }
     : { id: -1 });
   if (filters.minPrice !== undefined || filters.maxPrice !== undefined) where.price = { ...(filters.minPrice === undefined ? {} : { gte: filters.minPrice }), ...(filters.maxPrice === undefined ? {} : { lte: filters.maxPrice }) };
-  if (filters.attribute && filters.attributeValue) conditions.push({ specifications: { some: { name: filters.attribute, value: filters.attributeValue } } });
+  // Each attribute filter is its own condition, so different attributes combine with AND
+  // while the values inside one attribute combine with OR.
+  for (const filter of filters.attributeFilters || []) {
+    const ids = filter.values.map(Number).filter(Number.isSafeInteger);
+    conditions.push({ OR: [
+      { attributeValues: { some: {
+        attribute: { OR: [{ slug: filter.slug }, { name: filter.slug }], isActive: true },
+        OR: [
+          ...(ids.length ? [{ attributeValue: { id: { in: ids }, isActive: true } }] : []),
+          { attributeValue: { value: { in: filter.values }, isActive: true } },
+          { valueText: { in: filter.values } },
+        ],
+      } } },
+      { specifications: { some: { name: filter.slug, value: { in: filter.values } } } },
+    ] });
+  }
   if (conditions.length) where.AND = conditions;
   if (filters.status === 'active') where.isActive = true;
   if (filters.status === 'inactive') where.isActive = false;
@@ -72,6 +96,31 @@ async function resolveProductBrand(payload) {
   return { brandId: brand.id, brand: brand.name };
 }
 
+async function replaceProductAttributes(tx, productId, categoryId, entries) {
+  await tx.productAttributeValue.deleteMany({ where: { productId } });
+  entries ||= [];
+  if (!entries.length) return;
+  const attributes = await tx.attribute.findMany({ where: { id: { in: entries.map(item => item.attributeId) }, categories: { some: { categoryId } } }, include: { values: true } });
+  const byId = new Map(attributes.map(attribute => [attribute.id, attribute]));
+  const rows = [];
+  for (const entry of entries) {
+    const attribute = byId.get(entry.attributeId);
+    if (!attribute) throw productError('Thuộc tính không thuộc danh mục sản phẩm hoặc không tồn tại.');
+    if (['SELECT', 'MULTI_SELECT'].includes(attribute.type)) {
+      const selected = entry.attributeValueIds || [];
+      if (attribute.type === 'SELECT' && selected.length > 1) throw productError(`Thuộc tính “${attribute.name}” chỉ được chọn một giá trị.`);
+      const valid = new Set(attribute.values.filter(value => value.isActive).map(value => value.id));
+      if (selected.some(id => !valid.has(id))) throw productError(`Giá trị của thuộc tính “${attribute.name}” không hợp lệ.`);
+      rows.push(...selected.map(attributeValueId => ({ productId, attributeId: attribute.id, attributeValueId })));
+    } else if (entry.valueText !== null && entry.valueText !== '') {
+      if (attribute.type === 'NUMBER' && !Number.isFinite(Number(entry.valueText))) throw productError(`Thuộc tính “${attribute.name}” phải là số.`);
+      if (attribute.type === 'BOOLEAN' && !['true', 'false'].includes(entry.valueText)) throw productError(`Thuộc tính “${attribute.name}” phải là Có/Không.`);
+      rows.push({ productId, attributeId: attribute.id, valueText: entry.valueText });
+    }
+  }
+  if (rows.length) await tx.productAttributeValue.createMany({ data: rows });
+}
+
 function mapUniqueError(error) {
   if (error.code !== 'P2002') throw error;
   const target = Array.isArray(error.meta?.target) ? error.meta.target.join(',') : '';
@@ -92,6 +141,65 @@ export async function listProducts(filters) {
   return { filters: { brand: resolvedBrand }, items: rows.map(product => serialize(product)), meta: { page: filters.page, limit: filters.limit, total, totalPages: Math.ceil(total / filters.limit) }, stats: { total: await prisma.product.count({ where: { isDeleted: false } }), active, outOfStock, inactive } };
 }
 
+// Filter options are built from the browsing context (category + search) and the Admin
+// Category↔Attribute configuration, never from the already-filtered result page. That is what
+// keeps the option lists stable when the user narrows down to a single brand or value.
+export async function getFilterMetadata(context) {
+  const scope = await whereForQuery(context, null);
+
+  const [brandGroups, valueGroups, priceAggregate] = await Promise.all([
+    prisma.product.groupBy({ by: ['brandId'], where: { ...scope, brandId: { not: null } }, _count: { _all: true } }),
+    prisma.productAttributeValue.groupBy({ by: ['attributeValueId'], where: { attributeValueId: { not: null }, product: scope }, _count: { _all: true } }),
+    prisma.product.aggregate({ where: scope, _min: { price: true }, _max: { price: true } }),
+  ]);
+
+  const brandCounts = new Map(brandGroups.map(row => [row.brandId, row._count._all]));
+  const brands = brandCounts.size
+    ? (await prisma.brand.findMany({
+        where: { id: { in: [...brandCounts.keys()] }, isActive: true },
+        select: { id: true, name: true, slug: true },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      })).map(brand => ({ ...brand, productCount: brandCounts.get(brand.id) || 0 }))
+    : [];
+
+  const valueCounts = new Map(valueGroups.map(row => [row.attributeValueId, row._count._all]));
+  const category = context.category
+    ? await prisma.category.findFirst({ where: { slug: context.category, isActive: true }, select: { id: true } })
+    : null;
+
+  // Category drives which attributes may appear; without one, fall back to the attributes that
+  // in-scope products actually use.
+  const sourceAttributes = category
+    ? (await prisma.categoryAttribute.findMany({
+        where: { categoryId: category.id, attribute: { isActive: true } },
+        orderBy: [{ sortOrder: 'asc' }, { attributeId: 'asc' }],
+        include: { attribute: { include: { values: { where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } } } },
+      })).map(link => link.attribute)
+    : valueCounts.size
+      ? await prisma.attribute.findMany({
+          where: { isActive: true, values: { some: { id: { in: [...valueCounts.keys()] } } } },
+          include: { values: { where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } },
+          orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        })
+      : [];
+
+  const attributes = sourceAttributes
+    .filter(attribute => ['SELECT', 'MULTI_SELECT'].includes(attribute.type))
+    .map(attribute => ({
+      id: attribute.id, name: attribute.name, slug: attribute.slug, type: attribute.type,
+      values: attribute.values
+        .filter(value => valueCounts.has(value.id))
+        .map(value => ({ id: value.id, value: value.value, productCount: valueCounts.get(value.id) })),
+    }))
+    .filter(attribute => attribute.values.length > 0);
+
+  return {
+    brands,
+    attributes,
+    priceRange: { min: priceAggregate._min.price ?? null, max: priceAggregate._max.price ?? null },
+  };
+}
+
 export async function getProduct(id) { return serialize(await getByIdOrThrow(id, true), true); }
 export async function getProductBySlug(slug) {
   const product = await prisma.product.findFirst({ where: { slug, isDeleted: false, isActive: true }, include: detailInclude });
@@ -107,9 +215,12 @@ export async function createProduct(payload, images) {
   try {
     const category = await resolveProductCategory(payload);
     const brand = await resolveProductBrand(payload);
+    if (!category.categoryId) throw productError('Cần chọn danh mục để sinh Mã SP.', 400);
     return await prisma.$transaction(async tx => {
-      const product = await tx.product.create({ data: { name: payload.name, slug: payload.slug, sku: payload.sku, ...category, ...brand, shortDescription: payload.shortDescription, description: payload.description, price: payload.price, originalPrice: payload.originalPrice, costPrice: payload.costPrice, stockQuantity: payload.stockQuantity, lowStockThreshold: payload.lowStockThreshold, isActive: payload.isActive }, include: detailInclude });
-      if (payload.specifications.length) await tx.productSpecification.createMany({ data: payload.specifications.map(spec => ({ ...spec, productId: product.id })) });
+      const sku = await generateProductSkuForCategoryId(tx, category.categoryId);
+      const product = await tx.product.create({ data: { name: payload.name, slug: payload.slug, sku, ...category, ...brand, shortDescription: payload.shortDescription, description: payload.description, price: payload.price, originalPrice: payload.originalPrice, costPrice: payload.costPrice, stockQuantity: payload.stockQuantity, lowStockThreshold: payload.lowStockThreshold, isActive: payload.isActive }, include: detailInclude });
+      if (payload.customSpecifications.length) await tx.productSpecification.createMany({ data: payload.customSpecifications.map(spec => ({ ...spec, productId: product.id })) });
+      await replaceProductAttributes(tx, product.id, category.categoryId, payload.productAttributes || []);
       if (payload.highlightSpecs.length) await tx.productHighlightSpec.createMany({ data: payload.highlightSpecs.map(spec => ({ ...spec, productId: product.id })) });
       if (images.length) await tx.productImage.createMany({ data: images.map((image, index) => ({ imageUrl: image.imageUrl, productId: product.id, sortOrder: index, isPrimary: index === 0 })) });
       return serialize(await tx.product.findUnique({ where: { id: product.id }, include: detailInclude }), true);
@@ -124,9 +235,10 @@ export async function updateProduct(id, payload, images) {
   let removedImages = [];
   try {
     const result = await prisma.$transaction(async tx => {
-      await tx.product.update({ where: { id }, data: { name: payload.name, slug: payload.slug, sku: payload.sku, ...category, ...brand, shortDescription: payload.shortDescription, description: payload.description, price: payload.price, originalPrice: payload.originalPrice, costPrice: payload.costPrice, stockQuantity: payload.stockQuantity, lowStockThreshold: payload.lowStockThreshold, isActive: payload.isActive } });
+      await tx.product.update({ where: { id }, data: { name: payload.name, slug: payload.slug, ...category, ...brand, shortDescription: payload.shortDescription, description: payload.description, price: payload.price, originalPrice: payload.originalPrice, costPrice: payload.costPrice, stockQuantity: payload.stockQuantity, lowStockThreshold: payload.lowStockThreshold, isActive: payload.isActive } });
       await tx.productSpecification.deleteMany({ where: { productId: id } });
-      if (payload.specifications.length) await tx.productSpecification.createMany({ data: payload.specifications.map(spec => ({ ...spec, productId: id })) });
+      if (payload.customSpecifications.length) await tx.productSpecification.createMany({ data: payload.customSpecifications.map(spec => ({ ...spec, productId: id })) });
+      await replaceProductAttributes(tx, id, category.categoryId, payload.productAttributes || []);
       await tx.productHighlightSpec.deleteMany({ where: { productId: id } });
       if (payload.highlightSpecs.length) await tx.productHighlightSpec.createMany({ data: payload.highlightSpecs.map(spec => ({ ...spec, productId: id })) });
       const keep = new Set(payload.keepImageIds ?? current.images.map(image => image.id));

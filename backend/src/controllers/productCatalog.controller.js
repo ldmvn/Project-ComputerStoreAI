@@ -1,6 +1,6 @@
-import { createProduct, getProduct, getProductBySlug, listCategories, listProducts, removeImage, setStatus, softDeleteProduct, updateProduct } from '../services/productCatalog.service.js';
+import { createProduct, getFilterMetadata, getProduct, getProductBySlug, listCategories, listProducts, removeImage, setStatus, softDeleteProduct, updateProduct } from '../services/productCatalog.service.js';
 import { discardProductTemp, removeProductImage, saveProductImages } from '../services/productMedia.service.js';
-import { parseProductListQuery, parseProductPayload, productId, productError } from '../validators/product.validator.js';
+import { parseFilterContextQuery, parseProductListQuery, parseProductPayload, productId, productError } from '../validators/product.validator.js';
 import { recordProductView } from '../services/productStatistics.service.js';
 
 const asyncHandler = handler => (req, res, next) => Promise.resolve(handler(req, res)).catch(next);
@@ -26,6 +26,7 @@ export const publicList = asyncHandler(async (req, res) => {
   const result = await listProducts({ ...parseProductListQuery(req.query), status: 'active' });
   res.json({ products: result.items, meta: result.meta, filters: result.filters });
 });
+export const publicFilters = asyncHandler(async (req, res) => res.json(await getFilterMetadata(parseFilterContextQuery(req.query))));
 export const publicDetail = asyncHandler(async (req, res) => res.json({ product: await getProductBySlug(req.params.slug) }));
 export const publicView = asyncHandler(async (req, res) => res.json(await recordProductView(req.params.slug, req.body?.viewId)));
 export const create = asyncHandler(async (req, res) => withImages(req, async images => res.status(201).json({ product: await createProduct(parseBody(req), images), message: 'Đã tạo sản phẩm.' })));

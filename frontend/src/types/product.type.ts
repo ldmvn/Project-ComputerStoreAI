@@ -1,6 +1,8 @@
 export type ProductImage = { id: number; imageUrl: string; altText: string; sortOrder: number; isPrimary: boolean };
-export type ProductSpecification = { id?: number; name: string; value: string; sortOrder?: number };
+export type ProductSpecification = { id?: number; name: string; value: string; sortOrder?: number; source?: 'ATTRIBUTE' | 'CUSTOM' };
 export type ProductHighlightSpec = { id?: number; content: string; sortOrder?: number };
+export type ProductAttribute = { id: number; name: string; slug: string; type: 'SELECT' | 'MULTI_SELECT' | 'TEXT' | 'NUMBER' | 'BOOLEAN'; sortOrder: number; valueIds: number[]; values: string[] };
+export type ProductCustomSpecification = { id?: number; name: string; value: string; sortOrder: number };
 export type ProductStockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 export type ProductStatistics = { ratingAverage: number | null; reviewCount: number; commentCount: number; viewCount: number; distribution?: { 1: number; 2: number; 3: number; 4: number; 5: number } };
 
@@ -41,7 +43,9 @@ export type Product = {
   primaryImage: string | null;
   images?: ProductImage[];
   specifications?: ProductSpecification[];
+  customSpecifications?: ProductCustomSpecification[];
   highlightSpecs?: ProductHighlightSpec[];
+  productAttributes?: ProductAttribute[];
   ratingAverage?: number | null;
   reviewCount?: number;
   commentCount?: number;

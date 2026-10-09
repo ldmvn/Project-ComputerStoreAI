@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 /* eslint-disable @next/next/no-img-element */
 import { useState } from 'react';
 import { ImageOff, PackageOpen } from 'lucide-react';
@@ -22,6 +22,6 @@ export default function ProductGallery({ name, images, primaryImage }: { name: s
         {url ? <GalleryImage key={url} url={url} alt={selected?.altText || name} className="h-full w-full object-contain" /> : <div className="flex flex-col items-center gap-3 text-slate-400"><PackageOpen size={64} strokeWidth={1} aria-hidden="true" /><p className="text-sm">Chưa có ảnh sản phẩm</p></div>}
       </div>
     </div>
-    {photos.length > 1 && <div className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Chọn ảnh sản phẩm">{photos.map((image, index) => <button key={image.id} type="button" aria-label={`Xem ảnh ${index + 1}`} aria-pressed={selected?.id === image.id} onClick={() => setSelectedId(image.id)} className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 bg-white p-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500 ${selected?.id === image.id ? 'border-orange-500' : 'border-slate-200 hover:border-orange-300'}`}><GalleryImage url={image.imageUrl} alt="" className="h-full w-full object-contain" /></button>)}</div>}
+    {photos.length > 1 && <div className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Chọn ảnh sản phẩm">{photos.map((image, index) => <button key={image.id} type="button" aria-label={`Xem ảnh ${index + 1}`} aria-pressed={selected?.id === image.id} onClick={() => setSelectedId(image.id)} className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 bg-white p-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-500 ${selected?.id === image.id ? 'border-primary-500' : 'border-slate-200 hover:border-primary-300'}`}><GalleryImage url={image.imageUrl} alt="" className="h-full w-full object-contain" /></button>)}</div>}
   </section>;
 }

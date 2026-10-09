@@ -1,4 +1,4 @@
-import { createProductReview, listProductReviews } from '../services/productStatistics.service.js';
+import { createProductReview, deleteProductReview, listProductReviews } from '../services/productStatistics.service.js';
 import { discardReviewTemp, saveReviewImages } from '../services/reviewMedia.service.js';
 import { parseReviewListQuery, parseReviewPayload, reviewError } from '../validators/productReview.validator.js';
 
@@ -10,7 +10,7 @@ function parseBody(req) {
 
 async function withImages(req, work) {
   let saved = [];
-  try { saved = await saveReviewImages(req.files || []); return await work(saved); }
+  try { saved = await saveReviewImages(req.files || [], req.user.userId); return await work(saved); }
   catch (error) { await Promise.all(saved.map(image => removeReviewImage(image.storageKey))); throw error; }
   finally { await discardReviewTemp(req.files || []); }
 }
@@ -24,3 +24,8 @@ export const listReviews = asyncHandler(async (req, res) => {
 });
 
 export const createReview = asyncHandler(async (req, res) => withImages(req, async images => res.status(201).json({ review: await createProductReview(req.params.slug, req.user.userId, parseBody(req), images.map(image => image.imageUrl)), message: 'Gửi đánh giá thành công.' })));
+
+export const deleteReview = asyncHandler(async (req, res) => {
+  await deleteProductReview(req.params.slug, req.params.reviewId, req.user.userId);
+  res.json({ message: 'Đã xóa đánh giá.' });
+});

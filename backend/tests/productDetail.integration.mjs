@@ -19,9 +19,9 @@ try {
   section = await prisma.productSection.create({ data: { name: marker, slug: marker, items: { create: { productId: product.id } } } });
   let result = await detail(product.slug); assert.equal(result.status, 200);
   const record = result.data.product;
-  for (const key of ['id', 'name', 'slug', 'sku', 'price', 'originalPrice', 'stockQuantity', 'shortDescription', 'description', 'categoryInfo', 'brandInfo', 'images', 'specifications', 'isActive', 'stockStatus', 'ratingAverage', 'reviewCount', 'commentCount', 'viewCount']) assert.ok(key in record, key);
+  for (const key of ['id', 'name', 'slug', 'sku', 'price', 'originalPrice', 'stockQuantity', 'shortDescription', 'description', 'categoryInfo', 'brandInfo', 'images', 'customSpecifications', 'isActive', 'stockStatus', 'ratingAverage', 'reviewCount', 'commentCount', 'viewCount']) assert.ok(key in record, key);
   assert.equal(record.categoryInfo.name, category.name); assert.equal(record.category, category.name); assert.equal(record.brandInfo.name, brand.name); assert.equal(record.brand, brand.name);
-  assert.equal(record.images[0].altText, 'Primary photo'); assert.deepEqual(record.specifications.map(spec => spec.name), ['CPU', 'RAM']);
+  assert.equal(record.images[0].altText, 'Primary photo'); assert.deepEqual(record.customSpecifications.map(spec => spec.name), ['CPU', 'RAM']);
   assert.equal(record.price, product.price); assert.equal(record.originalPrice, product.originalPrice); assert.equal(record.stockStatus, 'LOW_STOCK'); assert.ok(!('costPrice' in record), 'Public API does not expose procurement costs');
   assert.equal(record.ratingAverage, null); assert.equal(record.reviewCount, 0); assert.equal(record.commentCount, 0); assert.equal(record.viewCount, 0);
   assert.equal((await detail(product.slug)).data.product.viewCount, 0, 'Reading API does not record page views');
