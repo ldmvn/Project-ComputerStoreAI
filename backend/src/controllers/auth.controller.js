@@ -1,5 +1,5 @@
 import { validateLoginInput, validateRegisterInput } from '../validators/auth.validator.js';
-import { getCurrentUser, loginUser, registerUser } from '../services/auth.service.js';
+import { changePassword as changePasswordService, getCurrentUser, loginUser, registerUser, updateUserProfile } from '../services/auth.service.js';
 
 export async function register(req, res, next) {
   const { errors, values } = validateRegisterInput(req.body);
@@ -29,10 +29,45 @@ export async function login(req, res, next) {
   }
 }
 
+export async function updateMe(req, res, next) {
+  const { fullName, phone } = req.body;
+  if (fullName !== undefined && !String(fullName).trim()) {
+    return res.status(400).json({ success: false, message: 'Họ và tên không được để trống.', field: 'fullName' });
+  }
+  try {
+    const user = await updateUserProfile(req.user.userId, { fullName, phone });
+    return res.status(200).json({ success: true, user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function me(req, res, next) {
   try {
     const user = await getCurrentUser(req.user.userId);
     return res.status(200).json({ success: true, user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function changePassword(req, res, next) {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || typeof currentPassword !== 'string') {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu hiện tại.', field: 'currentPassword' });
+  }
+  if (!newPassword || typeof newPassword !== 'string') {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu mới.', field: 'newPassword' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 8 ký tự.', field: 'newPassword' });
+  }
+  if (newPassword === currentPassword) {
+    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải khác mật khẩu hiện tại.', field: 'newPassword' });
+  }
+  try {
+    await changePasswordService(req.user.userId, { currentPassword, newPassword });
+    return res.status(200).json({ success: true, message: 'Đổi mật khẩu thành công.' });
   } catch (error) {
     return next(error);
   }

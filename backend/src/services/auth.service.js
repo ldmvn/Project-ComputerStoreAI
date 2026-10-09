@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { createUser, findSafeUserById, findUserByEmail, findUserByIdentifier, findUserByPhone } from '../repositories/user.repository.js';
+import { createUser, findSafeUserById, findUserByEmail, findUserByIdentifier, findUserByPhone, findUserById, updateUserById } from '../repositories/user.repository.js';
 import { createAccessToken } from './token.service.js';
 
 export class AuthConflictError extends Error {
@@ -53,8 +53,45 @@ export async function loginUser({ identifier, password }) {
   return { token: createAccessToken(user), user: safeUser };
 }
 
+export async function updateUserProfile(userId, { fullName, phone }) {
+  if (phone !== undefined && phone !== null && phone !== '') {
+    const existing = await findUserByPhone(phone);
+    if (existing && existing.id !== userId) throw new AuthConflictError('phone', 'Số điện thoại này đã được sử dụng.');
+  }
+  const data = {};
+  if (fullName !== undefined) data.fullName = fullName.trim();
+  if (phone !== undefined) data.phone = phone ? phone.trim() : null;
+  return updateUserById(userId, data);
+}
+
 export async function getCurrentUser(userId) {
   const user = await findSafeUserById(userId);
   if (!user || !user.isActive) throw new AuthCredentialsError();
   return user;
+}
+
+export class AuthWrongPasswordError extends Error {
+  constructor() {
+    super('Mật khẩu hiện tại không đúng.');
+    this.name = 'AuthWrongPasswordError';
+    this.statusCode = 400;
+    this.field = 'currentPassword';
+  }
+}
+
+export class AuthNoPasswordError extends Error {
+  constructor() {
+    super('Tài khoản đăng nhập qua Google không có mật khẩu. Vui lòng dùng tính năng quên mật khẩu.');
+    this.name = 'AuthNoPasswordError';
+    this.statusCode = 400;
+  }
+}
+
+export async function changePassword(userId, { currentPassword, newPassword }) {
+  const user = await findUserById(userId);
+  if (!user) throw new AuthCredentialsError();
+  if (!user.passwordHash) throw new AuthNoPasswordError();
+  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) throw new AuthWrongPasswordError();
+  const newHash = await bcrypt.hash(newPassword, 12);
+  await updateUserById(userId, { passwordHash: newHash });
 }
