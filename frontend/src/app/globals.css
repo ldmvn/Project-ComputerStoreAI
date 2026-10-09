@@ -29,7 +29,7 @@
 
 @layer components {
   .header-action {
-    @apply inline-flex h-10 w-8 shrink-0 items-center justify-center gap-1.5 rounded-md text-sm font-medium text-white transition-colors hover:bg-white/15 hover:text-white;
+    @apply inline-flex h-10 w-8 shrink-0 items-center justify-center gap-1.5 rounded-md text-sm font-medium text-slate-700 transition-colors hover:bg-primary-50 hover:text-primary-600;
     @apply sm:w-10 lg:h-auto lg:w-auto lg:px-2 lg:py-2;
   }
 }
@@ -41,9 +41,9 @@
   --bg-card: #ffffff;
   --text-secondary: #475569;
   --border-color: #e2e8f0;
-  --focus-color: #f97316;
+  --focus-color: #C4480A;
   --header-gradient-start: #f97316;
-  --header-gradient-end: #ef4444;
+  --header-gradient-end: #C4480A;
   --header-border: rgba(255, 255, 255, 0.2);
   --header-muted: rgba(255, 255, 255, 0.78);
   --header-hover: rgba(255, 255, 255, 0.15);
@@ -54,26 +54,26 @@
 }
 
 .site-header {
-  border-color: var(--header-border);
-  background: linear-gradient(90deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
-  color: white;
+  border-color: var(--border-color);
+  background: #ffffff;
+  color: var(--foreground);
 }
 
 .site-header input[type='search'] {
-  border-color: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 1px 2px rgba(127, 29, 29, 0.12);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .site-header input[type='search']:focus {
-  border-color: white;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+  border-color: var(--focus-color);
+  box-shadow: 0 0 0 3px rgba(196, 72, 10, 0.12);
 }
 
 html,
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif; /* ignore-value overused-font Inter */
 }
 
 @layer base {

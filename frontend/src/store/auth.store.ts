@@ -9,6 +9,7 @@ type AuthState = {
   login: (user: AuthUser, token: string, rememberMe: boolean) => void;
   logout: () => void;
   hydrate: () => Promise<void>;
+  setUser: (user: AuthUser) => void;
 };
 
 const TOKEN_KEY = 'accessToken';
@@ -32,6 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     storage.setItem(USER_KEY, JSON.stringify(user));
     set({ user, token, isHydrated: true });
   },
+  setUser: (user) => set({ user }),
   logout: () => {
     clearStoredAuth();
     set({ user: null, token: null, isHydrated: true });

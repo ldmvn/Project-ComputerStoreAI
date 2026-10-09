@@ -91,6 +91,22 @@ export async function loginAccount(identifier: string, password: string): Promis
   return data as LoginResponse;
 }
 
+export async function updateProfile(token: string, data: { fullName?: string; phone?: string }): Promise<AuthUser> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+  } catch {
+    throw new AuthRequestError('Không thể kết nối máy chủ. Vui lòng thử lại sau.');
+  }
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok) throw new AuthRequestError(json.message || 'Không thể cập nhật thông tin.', json.field);
+  return json.user as AuthUser;
+}
+
 export async function getCurrentUser(token: string): Promise<AuthUser> {
   const response = await fetch(`${API_BASE_URL}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },

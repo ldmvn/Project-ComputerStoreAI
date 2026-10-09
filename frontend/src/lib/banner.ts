@@ -14,10 +14,12 @@ export const IMAGE_LIMIT = 10 * 1024 * 1024;
 export const VIDEO_LIMIT = 50 * 1024 * 1024;
 export const AUTO_SIDE_ORDER: BannerPosition[] = ['BOTTOM_LEFT', 'BOTTOM_RIGHT', 'SIDE_RIGHT_TOP', 'SIDE_RIGHT_MIDDLE', 'SIDE_RIGHT_BOTTOM', 'SIDE_LEFT'];
 
-// Recommended full-layout ratios; optional slots expand when their neighbours are absent.
+// Matches the CSS in HomeBannerSection.module.css:
+//   MAIN_HERO: 2:1 on mobile, 16:7 at ≥769px
+//   BOTTOM slots: 8:3 on mobile/tablet, 8:3.5 at ≥1024px
 export function bannerAspectRatio(position: BannerPosition, viewportWidth: number) {
-  if (position === 'MAIN_HERO') return 2;
-  if (position.startsWith('BOTTOM')) return 8 / 3;
+  if (position === 'MAIN_HERO') return viewportWidth >= 769 ? 16 / 7 : 2;
+  if (position.startsWith('BOTTOM')) return viewportWidth >= 1024 ? 8 / 3.5 : 8 / 3;
   if (viewportWidth <= 768) return position === 'SIDE_LEFT' ? 3 / 5 : 5 / 3;
   const containerWidth = viewportWidth >= 1536 ? 1536 : viewportWidth >= 1280 ? 1280 : viewportWidth >= 1024 ? 1024 : 768;
   const gap = viewportWidth >= 1024 ? 16 : 12;
@@ -29,6 +31,10 @@ export function bannerAspectRatio(position: BannerPosition, viewportWidth: numbe
 
 export const bannerRecommendation = (position: BannerPosition, ratio: number) => {
   const width = position.startsWith('MAIN') ? 1600 : 800;
+  if (position === 'MAIN_HERO')
+    return `Khuyến nghị: ${width} × ${Math.round(width / (16 / 7))} px (tỉ lệ 16:7, hiển thị từ 769px). Mobile dùng tỉ lệ 2:1 — ảnh sẽ được crop ở giữa.`;
+  if (position.startsWith('BOTTOM'))
+    return `Khuyến nghị: ${width} × ${Math.round(width / (8 / 3.5))} px (tỉ lệ 8:3.5, desktop) hoặc ${width} × ${Math.round(width / (8 / 3))} px (8:3, tablet). Ảnh được crop ở giữa.`;
   return `Kích thước khuyến nghị: ${width} × ${Math.round(width / ratio)} px hoặc cùng tỉ lệ. Media khác tỉ lệ sẽ được crop ở giữa.`;
 };
 export const dateLabel = (date: string) => new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Bangkok' }).format(new Date(date));
