@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { getCurrentUser } from '@/services/auth.service';
 import type { AuthUser } from '@/types/user.type';
+import { useCartStore } from './cart.store';
+import { useWishlistStore } from './wishlist.store';
 
 type AuthState = {
   user: AuthUser | null;
@@ -27,6 +29,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isHydrated: false,
   login: (user, token, rememberMe) => {
+    // Reset cart & wishlist before loading the new user's data
+    useCartStore.getState().reset();
+    useWishlistStore.getState().clear();
     clearStoredAuth();
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem(TOKEN_KEY, token);
@@ -35,6 +40,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   setUser: (user) => set({ user }),
   logout: () => {
+    useCartStore.getState().reset();
+    useWishlistStore.getState().clear();
     clearStoredAuth();
     set({ user: null, token: null, isHydrated: true });
   },

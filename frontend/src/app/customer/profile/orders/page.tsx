@@ -26,6 +26,7 @@ import {
   OrderRequestError,
   type OrderFilters,
 } from '@/services/order.service';
+import { mediaUrl } from '@/services/http.client';
 import type { Order, OrderStats, OrderStatus } from '@/types/order.type';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ function OrderCard({ order, onCancel, cancelling }: {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
         <div className="flex items-center gap-2 min-w-0">
           <Package className="h-4 w-4 shrink-0 text-slate-400" />
-          <span className="truncate text-sm font-semibold text-slate-700">{order.orderCode}</span>
+          <span className="truncate text-sm font-semibold text-slate-700">#{order.id}</span>
           <span className="hidden text-xs text-slate-400 sm:block">{formatDate(order.createdAt)}</span>
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${meta.color}`}>
@@ -91,26 +92,25 @@ function OrderCard({ order, onCancel, cancelling }: {
         {firstItems.map((item) => (
           <div key={item.id} className="flex gap-3 py-3">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50 sm:h-14 sm:w-14">
-              {item.productImage ? (
-                <Image src={item.productImage} alt={item.productName} fill className="object-cover" sizes="56px" />
+              {item.primaryImage ? (
+                <Image src={mediaUrl(item.primaryImage)} alt={item.name} fill className="object-contain" sizes="56px" />
               ) : (
                 <ShoppingBag className="absolute inset-0 m-auto h-5 w-5 text-slate-300" />
               )}
             </div>
             <div className="min-w-0 flex-1">
-              {item.productSlug ? (
-                <Link href={`/customer/products/${item.productSlug}`}
+              {item.slug ? (
+                <Link href={`/products/${item.slug}`}
                   className="line-clamp-1 text-sm font-medium text-slate-700 hover:text-primary-600">
-                  {item.productName}
+                  {item.name}
                 </Link>
               ) : (
-                <p className="line-clamp-1 text-sm font-medium text-slate-700">{item.productName}</p>
+                <p className="line-clamp-1 text-sm font-medium text-slate-700">{item.name}</p>
               )}
-              {item.variant && <p className="mt-0.5 text-xs text-slate-400">{item.variant}</p>}
-              <p className="mt-0.5 text-xs text-slate-500">{formatPrice(item.unitPrice)} × {item.quantity}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{formatPrice(item.price)} × {item.quantity}</p>
             </div>
             <p className="shrink-0 text-sm font-semibold text-slate-800">
-              {formatPrice(item.unitPrice * item.quantity)}
+              {formatPrice(item.price * item.quantity)}
             </p>
           </div>
         ))}
@@ -118,9 +118,14 @@ function OrderCard({ order, onCancel, cancelling }: {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3">
-        <p className="text-sm text-slate-600">
-          Tổng tiền: <span className="font-bold text-primary-600">{formatPrice(order.totalAmount)}</span>
-        </p>
+        <div className="text-sm text-slate-600">
+          {order.discountAmount > 0 && (
+            <p className="text-xs text-slate-400">
+              Tạm tính: {formatPrice(order.subtotal)} &minus; Giảm: {formatPrice(order.discountAmount)}
+            </p>
+          )}
+          <p>Tổng tiền: <span className="font-bold text-primary-600">{formatPrice(order.subtotal - order.discountAmount)}</span></p>
+        </div>
         <div className="flex items-center gap-2">
           {canCancel && (
             <button onClick={() => onCancel(order.id)} disabled={cancelling}
@@ -169,7 +174,7 @@ export default function OrdersPage() {
     try {
       const res = await getMyOrders(token, filters);
       setOrders(res.orders); setTotal(res.total);
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof OrderRequestError && (err.status === 404 || err.status === 501)) {
         setOrders([]); setTotal(0);
       } else {
@@ -211,7 +216,7 @@ export default function OrdersPage() {
     try {
       const { order: updated } = await cancelOrder(token, orderId);
       setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-    } catch (err) {
+    } catch (err: unknown) {
       setCancelError(err instanceof OrderRequestError ? err.message : 'Không thể hủy đơn hàng.');
     } finally { setCancellingId(null); }
   };
@@ -236,7 +241,7 @@ export default function OrdersPage() {
 
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
             <ShoppingBag className="h-5 w-5" />
           </span>
           <div>

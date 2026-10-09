@@ -144,7 +144,7 @@ function ToastViewport({ toasts, onDismiss }: { toasts: ToastEntry[]; onDismiss:
       role="region"
       aria-label="Thông báo"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-6 z-[200] flex flex-col items-center gap-2 px-4 sm:top-7"
+      className="pointer-events-none fixed right-3 top-5 z-[9999] flex w-full max-w-[calc(100vw-24px)] flex-col gap-2.5 sm:right-5 sm:top-6 sm:max-w-[420px]"
     >
       {toasts.map(toast => (
         <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
@@ -161,7 +161,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastEntry; onDismiss: (id: st
       role={role}
       data-testid="app-toast"
       data-variant={toast.variant}
-      className={`pointer-events-auto flex w-full max-w-[min(420px,90vw)] items-start gap-3 rounded-xl border px-3.5 py-2.5 text-[13px] leading-5 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.25)] sm:text-sm animate-toast-in ${style.wrapper}`}
+      className={`pointer-events-auto flex w-full items-start gap-3 rounded-xl border px-3.5 py-2.5 text-[13px] leading-5 shadow-[0_8px_24px_-12px_rgba(15,23,42,0.25)] sm:text-sm animate-toast-in ${style.wrapper}`}
     >
       <span className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${style.iconWrap}`}>
         <VariantIcon variant={toast.variant} />

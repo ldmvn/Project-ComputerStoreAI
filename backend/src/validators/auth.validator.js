@@ -15,7 +15,7 @@ export function validateRegisterInput(input = {}) {
   if (!phone) errors.phone = 'Vui lòng nhập số điện thoại.';
   else if (!phonePattern.test(phone)) errors.phone = 'Vui lòng nhập số điện thoại hợp lệ.';
   if (!password) errors.password = 'Vui lòng nhập mật khẩu.';
-  else if (password.length < 8) errors.password = 'Mật khẩu phải có ít nhất 8 ký tự.';
+  else if (password.length < 6) errors.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
   else if (password.length > 128) errors.password = 'Mật khẩu không được vượt quá 128 ký tự.';
 
   return { errors, values: { fullName, email, phone, password } };

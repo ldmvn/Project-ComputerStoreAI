@@ -2,10 +2,14 @@ import { create } from 'zustand';
 import type { Product } from '@/types/product.type';
 
 export type CartItem = Pick<Product, 'id' | 'slug' | 'name' | 'price' | 'primaryImage' | 'stockQuantity'> & { quantity: number };
-const storageKey = 'ducmanhpc-cart';
 
-function persist(items: CartItem[]) {
-  try { localStorage.setItem(storageKey, JSON.stringify(items)); return true; } catch { return false; }
+const KEY_PREFIX = 'ducmanhpc-cart';
+function cartKey(userId?: string | number | null) {
+  return userId ? `${KEY_PREFIX}-${userId}` : `${KEY_PREFIX}-guest`;
+}
+
+function persist(items: CartItem[], key: string) {
+  try { localStorage.setItem(key, JSON.stringify(items)); return true; } catch { return false; }
 }
 function validItem(item: CartItem) {
   return item && Number.isSafeInteger(item.id) && item.id > 0 && typeof item.slug === 'string' && typeof item.name === 'string'
@@ -17,25 +21,39 @@ function validItem(item: CartItem) {
 type CartState = {
   items: CartItem[];
   hydrated: boolean;
-  hydrate: () => void;
+  /** Internal: the localStorage key currently in use — set at hydrate time */
+  _key: string;
+  hydrate: (userId?: string | number | null) => void;
+  /** Reset state and mark as not hydrated so the next hydrate() re-reads storage */
+  reset: () => void;
   addItem: (product: Product, buyNow?: boolean) => boolean;
   setQuantity: (id: number, quantity: number) => boolean;
   removeItem: (id: number) => boolean;
 };
+
 export const useCartStore = create<CartState>((set, get) => ({
-  items: [], hydrated: false,
-  hydrate: () => {
+  items: [],
+  hydrated: false,
+  _key: cartKey(),
+
+  hydrate: (userId) => {
     if (get().hydrated) return;
+    const key = cartKey(userId);
     try {
-      const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const stored = JSON.parse(localStorage.getItem(key) || '[]');
       const seen = new Set<number>();
       const items: CartItem[] = Array.isArray(stored) ? stored.filter(item => {
         if (!validItem(item) || seen.has(item.id)) return false;
         seen.add(item.id); return true;
       }).slice(0, 100) : [];
-      set({ items, hydrated: true });
-    } catch { set({ items: [], hydrated: true }); }
+      set({ items, hydrated: true, _key: key });
+    } catch {
+      set({ items: [], hydrated: true, _key: key });
+    }
   },
+
+  reset: () => set({ items: [], hydrated: false, _key: cartKey() }),
+
   addItem: (product, buyNow = false) => {
     get().hydrate();
     if (!product.isActive || product.isDeleted || product.stockQuantity <= 0) return false;
@@ -44,19 +62,21 @@ export const useCartStore = create<CartState>((set, get) => ({
     if (quantity > product.stockQuantity) return false;
     const item: CartItem = { id: product.id, name: product.name, slug: product.slug, price: product.price, primaryImage: product.primaryImage, stockQuantity: product.stockQuantity, quantity };
     const items = [...get().items.filter(row => row.id !== product.id), item];
-    if (!persist(items)) return false;
+    if (!persist(items, get()._key)) return false;
     set({ items }); return true;
   },
+
   setQuantity: (id, quantity) => {
     const item = get().items.find(item => item.id === id);
     if (!item || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > item.stockQuantity) return false;
     const items = get().items.map(item => item.id === id ? { ...item, quantity } : item);
-    if (!persist(items)) return false;
+    if (!persist(items, get()._key)) return false;
     set({ items }); return true;
   },
+
   removeItem: id => {
     const items = get().items.filter(item => item.id !== id);
-    if (!persist(items)) return false;
+    if (!persist(items, get()._key)) return false;
     set({ items }); return true;
   },
 }));

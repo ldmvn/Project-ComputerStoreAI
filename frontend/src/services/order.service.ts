@@ -1,29 +1,11 @@
-import type { Order, OrderListResponse, OrderStats } from '@/types/order.type';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { apiRequest } from './http.client';
+import type { Order, OrderStats, CreateOrderPayload } from '@/types/order.type';
 
 export class OrderRequestError extends Error {
-  status: number;
-  constructor(message: string, status = 500) {
+  constructor(message: string, public readonly status: number) {
     super(message);
     this.name = 'OrderRequestError';
-    this.status = status;
   }
-}
-
-async function request<T>(path: string, token: string, init?: RequestInit): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...init?.headers },
-    });
-  } catch {
-    throw new OrderRequestError('Không thể kết nối máy chủ.', 0);
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new OrderRequestError(data.message || 'Yêu cầu không thành công.', res.status);
-  return data as T;
 }
 
 export type OrderFilters = {
@@ -33,19 +15,71 @@ export type OrderFilters = {
   limit?: number;
 };
 
-export function getMyOrders(token: string, filters: OrderFilters = {}): Promise<OrderListResponse> {
-  const params = new URLSearchParams();
-  if (filters.status) params.set('status', filters.status);
-  if (filters.search) params.set('search', filters.search);
-  if (filters.page) params.set('page', String(filters.page));
-  params.set('limit', String(filters.limit ?? 10));
-  return request<OrderListResponse>(`/orders/me?${params}`, token);
+export async function createOrder(payload: CreateOrderPayload, token: string): Promise<Order> {
+  try {
+    const { order } = await apiRequest<{ order: Order }>('/orders', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, token);
+    return order;
+  } catch (err) {
+    if (err instanceof Error) throw new OrderRequestError(err.message, (err as { status?: number }).status ?? 500);
+    throw err;
+  }
 }
 
-export function getOrderStats(token: string): Promise<OrderStats> {
-  return request<OrderStats>('/orders/me/stats', token);
+export async function listOrders(token: string): Promise<Order[]> {
+  const { orders } = await apiRequest<{ orders: Order[] }>('/orders', {}, token);
+  return orders;
 }
 
-export function cancelOrder(token: string, orderId: number): Promise<{ order: Order }> {
-  return request<{ order: Order }>(`/orders/${orderId}/cancel`, token, { method: 'POST' });
+// Profile orders page: client-side filtering + pagination
+export async function getMyOrders(token: string, filters: OrderFilters = {}): Promise<{ orders: Order[]; total: number }> {
+  let all: Order[];
+  try {
+    all = await listOrders(token);
+  } catch (err) {
+    if (err instanceof Error) throw new OrderRequestError(err.message, (err as { status?: number }).status ?? 500);
+    throw err;
+  }
+
+  let filtered = all;
+  if (filters.status) {
+    filtered = filtered.filter(o => o.status === filters.status);
+  }
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    filtered = filtered.filter(o =>
+      String(o.id).includes(q) ||
+      o.items.some(i => i.name.toLowerCase().includes(q)) ||
+      o.shippingName.toLowerCase().includes(q)
+    );
+  }
+
+  const total = filtered.length;
+  const page = filters.page ?? 1;
+  const limit = filters.limit ?? 10;
+  const start = (page - 1) * limit;
+  const orders = filtered.slice(start, start + limit);
+  return { orders, total };
+}
+
+export async function getOrderStats(token: string): Promise<OrderStats> {
+  const all = await listOrders(token);
+  return {
+    total: all.length,
+    waitingPickup: all.filter(o => o.status === 'CONFIRMED').length,
+    completed: all.filter(o => o.status === 'DELIVERED').length,
+    totalValue: all.reduce((sum, o) => sum + o.subtotal, 0),
+  };
+}
+
+export async function getOrder(id: number, token: string): Promise<Order> {
+  const { order } = await apiRequest<{ order: Order }>(`/orders/${id}`, {}, token);
+  return order;
+}
+
+export async function cancelOrder(token: string, id: number): Promise<{ order: Order }> {
+  const { order } = await apiRequest<{ order: Order }>(`/orders/${id}/cancel`, { method: 'PATCH' }, token);
+  return { order };
 }

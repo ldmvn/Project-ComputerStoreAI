@@ -25,7 +25,7 @@ export function itemHref(item, rootSlug, activeCategoryIds, attributeCounts) {
     if (item.maxPrice !== null) params.maxPrice = String(item.maxPrice);
     return productUrl(params);
   }
-  if (item.type === 'ATTRIBUTE_FILTER') return hasValidReference(item, activeCategoryIds) && (attributeCounts.get(JSON.stringify([item.attributeId, item.attributeValueId])) || 0) > 0 ? productUrl({ ...params, attribute: item.attribute.slug, attributeValue: String(item.attributeValueId) }) : null;
+  if (item.type === 'ATTRIBUTE_FILTER') return hasValidReference(item, activeCategoryIds) ? productUrl({ ...params, attribute: item.attribute.slug, attributeValue: String(item.attributeValueId) }) : null;
   return item.type === 'CUSTOM_URL' && safeMenuUrl(item.customUrl) ? item.customUrl : null;
 }
 async function visibility(db) {

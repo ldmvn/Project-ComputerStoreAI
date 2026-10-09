@@ -14,7 +14,7 @@ export function validatePasswordReset(input = {}, mode = 'request') {
     values.resetToken = typeof input.resetToken === 'string' ? input.resetToken : '';
     values.password = typeof input.password === 'string' ? input.password : '';
     if (!/^[a-f0-9]{64}$/.test(values.resetToken)) errors.resetToken = 'Phiên đổi mật khẩu không hợp lệ.';
-    if (values.password.length < 8 || values.password.length > 128 || Buffer.byteLength(values.password, 'utf8') > 72) errors.password = 'Mật khẩu phải từ 8 đến 128 ký tự và tối đa 72 byte UTF-8.';
+    if (values.password.length < 6 || values.password.length > 128 || Buffer.byteLength(values.password, 'utf8') > 72) errors.password = 'Mật khẩu phải từ 6 đến 128 ký tự và tối đa 72 byte UTF-8.';
     if (values.password !== input.confirmPassword) errors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
   }
   return { values, errors };

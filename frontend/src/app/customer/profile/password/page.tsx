@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
+import { ChevronRight, Lock, Eye, EyeOff, AlertCircle, Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { useToast } from '@/components/ui/Toast';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -12,7 +13,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 function getStrength(pw: string): { score: number; label: string; color: string } {
   if (!pw) return { score: 0, label: '', color: '' };
   let score = 0;
-  if (pw.length >= 8)  score++;
+  if (pw.length >= 6)  score++;
   if (pw.length >= 12) score++;
   if (/[A-Z]/.test(pw)) score++;
   if (/[0-9]/.test(pw)) score++;
@@ -65,13 +66,13 @@ function PasswordField({
 
 export default function PasswordPage() {
   const { user, token } = useAuthStore();
+  const toast = useToast();
 
-  const [current,  setCurrent]  = useState('');
-  const [next,     setNext]     = useState('');
-  const [confirm,  setConfirm]  = useState('');
-  const [errors,   setErrors]   = useState<Record<string, string>>({});
-  const [loading,  setLoading]  = useState(false);
-  const [success,  setSuccess]  = useState(false);
+  const [current,  setCurrent] = useState('');
+  const [next,     setNext]    = useState('');
+  const [confirm,  setConfirm] = useState('');
+  const [errors,   setErrors]  = useState<Record<string, string>>({});
+  const [loading,  setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
   const strength = getStrength(next);
@@ -80,7 +81,7 @@ export default function PasswordPage() {
     const e: Record<string, string> = {};
     if (!current) e.current = 'Vui lòng nhập mật khẩu hiện tại.';
     if (!next)    e.next    = 'Vui lòng nhập mật khẩu mới.';
-    else if (next.length < 8) e.next = 'Mật khẩu mới phải có ít nhất 8 ký tự.';
+    else if (next.length < 6) e.next = 'Mật khẩu mới phải có ít nhất 6 ký tự.';
     else if (next === current) e.next = 'Mật khẩu mới phải khác mật khẩu hiện tại.';
     if (!confirm)           e.confirm = 'Vui lòng xác nhận mật khẩu mới.';
     else if (confirm !== next) e.confirm = 'Mật khẩu xác nhận không khớp.';
@@ -108,9 +109,9 @@ export default function PasswordPage() {
         else setApiError(data.message || 'Đã xảy ra lỗi. Vui lòng thử lại.');
         return;
       }
-      setSuccess(true);
+      toast.success('Đổi mật khẩu thành công!', 'Vui lòng dùng mật khẩu mới cho lần đăng nhập tiếp theo.');
       setCurrent(''); setNext(''); setConfirm('');
-      setErrors({});
+      setErrors({}); setApiError(null);
     } catch {
       setApiError('Không thể kết nối máy chủ. Vui lòng thử lại.');
     } finally {
@@ -164,13 +165,6 @@ export default function PasswordPage() {
 
         {/* Form */}
         <div className="px-5 py-6">
-          {success && (
-            <div className="mb-5 flex items-center gap-2.5 rounded-xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              Đổi mật khẩu thành công! Vui lòng dùng mật khẩu mới cho lần đăng nhập tiếp theo.
-            </div>
-          )}
-
           {apiError && (
             <div className="mb-5 flex items-center gap-2.5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
               <AlertCircle className="h-4 w-4 shrink-0" /> {apiError}
@@ -182,7 +176,7 @@ export default function PasswordPage() {
               id="currentPassword"
               label="Mật khẩu hiện tại"
               value={current}
-              onChange={v => { setCurrent(v); setErrors(e => ({ ...e, current: '' })); setSuccess(false); }}
+              onChange={v => { setCurrent(v); setErrors(e => ({ ...e, current: '' })); }}
               error={errors.current}
               placeholder="Nhập mật khẩu hiện tại"
             />
@@ -193,7 +187,7 @@ export default function PasswordPage() {
               id="newPassword"
               label="Mật khẩu mới"
               value={next}
-              onChange={v => { setNext(v); setErrors(e => ({ ...e, next: '' })); setSuccess(false); }}
+              onChange={v => { setNext(v); setErrors(e => ({ ...e, next: '' })); }}
               error={errors.next}
               placeholder="Tối thiểu 8 ký tự"
             />
@@ -214,7 +208,7 @@ export default function PasswordPage() {
               id="confirmPassword"
               label="Xác nhận mật khẩu mới"
               value={confirm}
-              onChange={v => { setConfirm(v); setErrors(e => ({ ...e, confirm: '' })); setSuccess(false); }}
+              onChange={v => { setConfirm(v); setErrors(e => ({ ...e, confirm: '' })); }}
               error={errors.confirm}
               placeholder="Nhập lại mật khẩu mới"
             />

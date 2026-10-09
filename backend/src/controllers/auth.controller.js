@@ -59,8 +59,8 @@ export async function changePassword(req, res, next) {
   if (!newPassword || typeof newPassword !== 'string') {
     return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu mới.', field: 'newPassword' });
   }
-  if (newPassword.length < 8) {
-    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 8 ký tự.', field: 'newPassword' });
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.', field: 'newPassword' });
   }
   if (newPassword === currentPassword) {
     return res.status(400).json({ success: false, message: 'Mật khẩu mới phải khác mật khẩu hiện tại.', field: 'newPassword' });

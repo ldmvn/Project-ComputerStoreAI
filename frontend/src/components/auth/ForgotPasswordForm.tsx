@@ -91,7 +91,7 @@ export default function ForgotPasswordForm({ mode, initialEmail, onModeChange, o
         toast.success('Mã OTP hợp lệ', 'Vui lòng đặt mật khẩu mới.');
       });
     } else {
-      if (password.length < 8 || password.length > 128 || new TextEncoder().encode(password).length > 72) { setError('Mật khẩu phải từ 8 đến 128 ký tự và tối đa 72 byte UTF-8.'); return; }
+      if (password.length < 6 || password.length > 128 || new TextEncoder().encode(password).length > 72) { setError('Mật khẩu phải từ 6 đến 128 ký tự và tối đa 72 byte UTF-8.'); return; }
       if (password !== confirmation) { setError('Mật khẩu xác nhận không khớp.'); return; }
       await perform(async () => {
         await completePasswordReset(email, resetToken, password, confirmation);

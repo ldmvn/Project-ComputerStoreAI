@@ -3,9 +3,13 @@
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ title, onClose, children, busy = false, footer, size }: {
+export default function Modal({ title, onClose, children, busy = false, footer, size, customHeader, scrollableBody }: {
   title: string; onClose: () => void; children: React.ReactNode; busy?: boolean;
   footer?: React.ReactNode; size?: 'lg';
+  /** Replaces the default title+close row with custom header content */
+  customHeader?: React.ReactNode;
+  /** Forces fixed-header + scrollable-body layout even without a footer */
+  scrollableBody?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -33,21 +37,26 @@ export default function Modal({ title, onClose, children, busy = false, footer, 
   }, []);
 
   const panelWidth = size === 'lg' ? 'max-w-5xl' : 'max-w-3xl';
+  const useColumnLayout = !!(footer || scrollableBody || customHeader);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onMouseDown={event => { if (event.target === event.currentTarget && !busy) onClose(); }}>
-      {footer ? (
+      {useColumnLayout ? (
         <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={busy} className={`ui-modal flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-xl ${panelWidth}`}>
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 pb-4 pt-5 sm:px-6 sm:pt-6">
-            <h2 id={titleId} className="min-w-0 truncate text-xl font-semibold" title={title}>{title}</h2>
-            <button type="button" disabled={busy} onClick={onClose} aria-label="Đóng hộp thoại" className="ui-button rounded-lg p-2 hover:bg-slate-100 disabled:opacity-50"><X className="h-5 w-5" /></button>
+            {customHeader ?? (
+              <h2 id={titleId} className="min-w-0 truncate text-xl font-semibold" title={title}>{title}</h2>
+            )}
+            <button type="button" disabled={busy} onClick={onClose} aria-label="Đóng hộp thoại" className="ui-button ml-2 shrink-0 rounded-lg p-2 hover:bg-slate-100 disabled:opacity-50"><X className="h-5 w-5" /></button>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
             {children}
           </div>
-          <div className="shrink-0 border-t border-slate-200 px-5 py-4 sm:px-6">
-            {footer}
-          </div>
+          {footer && (
+            <div className="shrink-0 border-t border-slate-200 px-5 py-4 sm:px-6">
+              {footer}
+            </div>
+          )}
         </div>
       ) : (
         <div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={busy} className={`ui-modal max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-6 ${panelWidth}`}>

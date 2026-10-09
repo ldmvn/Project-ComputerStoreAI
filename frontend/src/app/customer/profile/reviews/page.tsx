@@ -5,9 +5,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   Star, ChevronRight, MessageSquare, AlertCircle, RotateCcw,
-  Trash2, CheckCircle2, Clock, ShoppingBag, X,
+  Trash2, CheckCircle2, Clock, ShoppingBag,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { getMyReviews, deleteMyReview } from '@/services/review.service';
 import { mediaUrl } from '@/services/http.client';
 import type { MyReview } from '@/types/review.type';
@@ -25,28 +27,6 @@ function StarRow({ rating }: { rating: number }) {
         <Star key={i} className={`h-3.5 w-3.5 ${i <= rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
       ))}
     </span>
-  );
-}
-
-// ─── confirm dialog ───────────────────────────────────────────────────────────
-
-function ConfirmDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-        <p className="text-sm text-slate-700">Bạn có chắc muốn xóa đánh giá này không?</p>
-        <div className="mt-5 flex justify-end gap-3">
-          <button onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
-            Hủy
-          </button>
-          <button onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
-            Xóa
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -121,17 +101,16 @@ const LIMIT = 10;
 export default function ReviewsPage() {
   const { user, token } = useAuthStore();
 
+  const toast   = useToast();
+  const confirm = useConfirm();
+
   const [reviews, setReviews] = useState<MyReview[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
-  const [toast, setToast]     = useState<string | null>(null);
-  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   const totalPages = Math.ceil(total / LIMIT);
-
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
   const load = useCallback(async (p = 1) => {
     if (!token) return;
@@ -145,16 +124,20 @@ export default function ReviewsPage() {
 
   useEffect(() => { load(1); }, [load]);
 
-  const handleDelete = async () => {
-    if (!token || confirmId === null) return;
-    const id = confirmId; setConfirmId(null);
+  const handleDelete = async (id: number) => {
+    const ok = await confirm({
+      title: 'Xóa đánh giá',
+      description: 'Bạn có chắc muốn xóa đánh giá này không?',
+      destructive: true,
+    });
+    if (!ok || !token) return;
     try {
       await deleteMyReview(token, id);
       setReviews(prev => prev.filter(r => r.id !== id));
       setTotal(t => t - 1);
-      showToast('Đã xóa đánh giá.');
+      toast.success('Đã xóa đánh giá.');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể xóa.');
+      toast.error(err instanceof Error ? err.message : 'Không thể xóa.');
     }
   };
 
@@ -169,16 +152,6 @@ export default function ReviewsPage() {
 
   return (
     <>
-      {toast && (
-        <div className="fixed right-4 top-4 z-[60] flex items-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
-          <CheckCircle2 className="h-4 w-4" /> {toast}
-        </div>
-      )}
-
-      {confirmId !== null && (
-        <ConfirmDialog onConfirm={handleDelete} onCancel={() => setConfirmId(null)} />
-      )}
-
       {/* Breadcrumb */}
       <nav className="mb-4 flex items-center gap-1.5 text-sm text-slate-500">
         <Link href="/" className="hover:text-primary-600">Trang chủ</Link>
@@ -249,7 +222,7 @@ export default function ReviewsPage() {
             </div>
           ) : (
             reviews.map(r => (
-              <ReviewCard key={r.id} review={r} onDelete={() => setConfirmId(r.id)} />
+              <ReviewCard key={r.id} review={r} onDelete={() => handleDelete(r.id)} />
             ))
           )}
 

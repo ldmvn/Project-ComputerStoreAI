@@ -9,17 +9,38 @@ import { mediaUrl } from '@/services/http.client';
 interface CartItemProps {
   item: CartItemData;
   readOnly?: boolean;
+  checked?: boolean;
+  onToggle?: () => void;
   onQuantityChange?: (quantity: number) => void;
   onRemove?: () => void;
 }
 
-export default function CartItem({ item, readOnly = false, onQuantityChange, onRemove }: CartItemProps) {
+export default function CartItem({ item, readOnly = false, checked = true, onToggle, onQuantityChange, onRemove }: CartItemProps) {
   const lineTotal = item.price * item.quantity;
   const atMax = item.quantity >= item.stockQuantity;
   const stepClass = 'flex h-9 w-9 items-center justify-center text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent';
 
   return (
-    <li className="grid grid-cols-[72px_minmax(0,1fr)] items-start gap-x-3 gap-y-3 py-4 sm:grid-cols-[80px_minmax(0,1fr)_auto] sm:gap-x-4 sm:items-center">
+    <li className="grid grid-cols-[20px_72px_minmax(0,1fr)] items-start gap-x-3 gap-y-3 py-4 sm:grid-cols-[20px_80px_minmax(0,1fr)_auto] sm:gap-x-4 sm:items-center">
+      {/* Checkbox */}
+      {!readOnly ? (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={checked}
+          aria-label={`${checked ? 'Bỏ chọn' : 'Chọn'} ${item.name}`}
+          onClick={onToggle}
+          className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors sm:mt-0"
+          style={{ borderColor: checked ? '#C4480A' : '#cbd5e1', backgroundColor: checked ? '#C4480A' : 'white' }}
+        >
+          {checked && (
+            <svg className="h-3 w-3 text-white" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+      ) : <span />}
+
       <Link
         href={productDetailHref(item.slug)}
         className="flex h-[72px] w-[72px] items-center justify-center rounded-lg bg-slate-50 p-2 sm:h-20 sm:w-20"
@@ -48,7 +69,7 @@ export default function CartItem({ item, readOnly = false, onQuantityChange, onR
       </div>
 
       {/* Quantity + line total: own row on mobile, trailing column from sm up */}
-      <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:w-auto sm:justify-end">
+      <div className="col-span-3 flex items-center justify-between gap-3 sm:col-span-1 sm:w-auto sm:justify-end">
         {readOnly ? (
           <span className="text-sm text-slate-500">Số lượng: <span className="font-medium tabular-nums text-slate-700">{item.quantity}</span></span>
         ) : (

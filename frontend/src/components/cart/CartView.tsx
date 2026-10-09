@@ -1,8 +1,11 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { PackageOpen, SearchX } from 'lucide-react';
+import { PackageOpen } from 'lucide-react';
 import { useCartStore, type CartItem } from '@/store/cart.store';
+import { useAuthStore } from '@/store/auth.store';
+import { useCheckoutStore } from '@/store/checkout.store';
 import { useToast } from '@/components/ui/Toast';
 import EmptyState from '@/components/ui/EmptyState';
 import CartItemsList from './CartItemsList';
@@ -25,20 +28,67 @@ function CartSkeleton() {
   );
 }
 
-export default function CartView({ checkout = false, selectedSlug }: { checkout?: boolean; selectedSlug?: string }) {
+export default function CartView() {
+  const router = useRouter();
   const items = useCartStore(state => state.items);
   const hydrated = useCartStore(state => state.hydrated);
   const hydrate = useCartStore(state => state.hydrate);
   const setQuantity = useCartStore(state => state.setQuantity);
   const removeItem = useCartStore(state => state.removeItem);
+  const user = useAuthStore(state => state.user);
+  const prepare = useCheckoutStore(state => state.prepare);
   const toast = useToast();
 
-  useEffect(() => { hydrate(); }, [hydrate]);
+  const deselectedKey = `cart_deselected_${user?.id ?? 'guest'}`;
 
-  // Checkout reviews a single product chosen from the detail page; the cart shows everything.
-  const visibleItems = checkout && selectedSlug ? items.filter(item => item.slug === selectedSlug) : items;
-  const total = visibleItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const itemCount = visibleItems.reduce((count, item) => count + item.quantity, 0);
+  // deselectedIds: IDs người dùng đã chủ động bỏ tích — persisted to localStorage per user
+  const [deselectedIds, setDeselectedIds] = useState<Set<number>>(new Set<number>());
+
+  const saveDeselected = (next: Set<number>) => {
+    try { localStorage.setItem(deselectedKey, JSON.stringify([...next])); } catch {}
+    setDeselectedIds(next);
+  };
+
+  useEffect(() => { hydrate(user?.id); }, [hydrate, user?.id]);
+
+  // Reset deselectedIds when user changes (load that user's saved deselection)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(deselectedKey);
+      setDeselectedIds(raw ? new Set<number>(JSON.parse(raw)) : new Set<number>());
+    } catch { setDeselectedIds(new Set<number>()); }
+  }, [deselectedKey]);
+
+  // Cleanup deselectedIds khi item bị xóa khỏi giỏ
+  useEffect(() => {
+    const currentIds = new Set(items.map(i => i.id));
+    setDeselectedIds(prev => {
+      const next = new Set([...prev].filter(id => currentIds.has(id)));
+      if (next.size !== prev.size) {
+        try { localStorage.setItem(deselectedKey, JSON.stringify([...next])); } catch {}
+        return next;
+      }
+      return prev;
+    });
+  }, [items, deselectedKey]);
+
+  // selectedIds = tất cả items TRỪ những cái đã bỏ tích
+  const selectedIds = new Set(items.filter(i => !deselectedIds.has(i.id)).map(i => i.id));
+
+  const handleToggle = (id: number) => {
+    const next = new Set(deselectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    saveDeselected(next);
+  };
+
+  const handleToggleAll = () => {
+    const allSelected = items.every(i => !deselectedIds.has(i.id));
+    saveDeselected(allSelected ? new Set(items.map(i => i.id)) : new Set());
+  };
+
+  const selectedItems = items.filter(i => selectedIds.has(i.id));
+  const total = selectedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const itemCount = selectedItems.reduce((count, item) => count + item.quantity, 0);
 
   const handleQuantityChange = (id: number, quantity: number) => {
     if (!Number.isSafeInteger(quantity) || quantity < 1) return;
@@ -52,41 +102,37 @@ export default function CartView({ checkout = false, selectedSlug }: { checkout?
     else toast.error('Có lỗi xảy ra', 'Không thể lưu giỏ hàng.');
   };
 
-  const heading = checkout ? 'Thanh toán' : 'Giỏ hàng';
+  const handleCheckout = () => {
+    if (selectedItems.length === 0) return;
+    prepare('cart', selectedItems);
+    router.push('/customer/checkout');
+  };
 
   return (
     <section>
-      <h1 className="mb-6 text-2xl font-semibold text-slate-900">{heading}</h1>
+      <h1 className="mb-6 text-2xl font-semibold text-slate-900">Giỏ hàng</h1>
 
       {!hydrated ? (
         <CartSkeleton />
-      ) : visibleItems.length === 0 ? (
-        // The two empty causes are different: nothing saved at all, vs. a checkout link
-        // pointing at a product that is no longer in the cart.
-        checkout && selectedSlug ? (
-          <EmptyState
-            icon={SearchX}
-            title="Sản phẩm này không còn trong giỏ hàng."
-            description="Sản phẩm có thể đã được xóa hoặc giỏ hàng đã thay đổi."
-            action={<Link href="/customer/cart" className="text-sm font-semibold text-primary-700">Quay lại giỏ hàng</Link>}
-          />
-        ) : (
-          <EmptyState
-            icon={PackageOpen}
-            title="Chưa có sản phẩm trong giỏ hàng."
-            description="Thêm sản phẩm bạn muốn mua để tiếp tục."
-            action={<Link href="/customer/products" className="text-sm font-semibold text-primary-700">Khám phá sản phẩm</Link>}
-          />
-        )
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={PackageOpen}
+          title="Chưa có sản phẩm trong giỏ hàng."
+          description="Thêm sản phẩm bạn muốn mua để tiếp tục."
+          action={<Link href="/customer/products" className="text-sm font-semibold text-primary-700">Khám phá sản phẩm</Link>}
+        />
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <CartItemsList
-            items={visibleItems}
-            readOnly={checkout}
+            items={items}
+            selectedIds={selectedIds}
+            readOnly={false}
+            onToggle={handleToggle}
+            onToggleAll={handleToggleAll}
             onQuantityChange={handleQuantityChange}
             onRemove={handleRemove}
           />
-          <CartSummary total={total} itemCount={itemCount} checkout={checkout} />
+          <CartSummary total={total} itemCount={itemCount} onCheckout={handleCheckout} />
         </div>
       )}
     </section>

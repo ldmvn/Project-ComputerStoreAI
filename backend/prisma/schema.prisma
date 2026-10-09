@@ -37,6 +37,8 @@ model Product {
   comments          ProductComment[]
   views             ProductView[]
   wishlistItems     WishlistItem[]
+  orderItems        OrderItem[]
+  inventoryLogs     InventoryLog[]
   categoryRecord    Category?               @relation("ProductCategory", fields: [categoryId], references: [id], onDelete: Restrict)
   brandRecord       Brand?                  @relation("ProductBrand", fields: [brandId], references: [id], onDelete: Restrict)
 
@@ -345,6 +347,8 @@ model User {
   reviews      ProductReview[]
   wishlist     Wishlist?
   addresses    Address[]
+  orders          Order[]
+  returnRequests  ReturnRequest[]
 }
 
 model Address {
@@ -452,4 +456,161 @@ model WishlistItem {
 
   @@unique([wishlistId, productId])
   @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPING
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id               Int                  @id @default(autoincrement())
+  userId           Int
+  status           OrderStatus          @default(PENDING)
+  paymentMethod    String               @db.VarChar(50)
+  note             String?              @db.VarChar(500)
+  shippingName     String               @db.VarChar(191)
+  shippingPhone    String               @db.VarChar(20)
+  shippingAddress  String               @db.VarChar(1000)
+  subtotal         Int
+  discountAmount   Int                  @default(0)
+  trackingNumber   String?              @db.VarChar(100)
+  shippingProvider String?              @db.VarChar(100)
+  confirmedAt      DateTime?
+  shippedAt        DateTime?
+  deliveredAt      DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  user             User                 @relation(fields: [userId], references: [id])
+  items            OrderItem[]
+  statusHistory    OrderStatusHistory[]
+  returnRequests   ReturnRequest[]
+  voucherUsage     VoucherUsage?
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id           Int     @id @default(autoincrement())
+  orderId      Int
+  productId    Int
+  name         String  @db.VarChar(500)
+  slug         String  @db.VarChar(191)
+  price        Int
+  quantity     Int
+  primaryImage String? @db.VarChar(1000)
+  order        Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product      Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderStatusHistory {
+  id        Int         @id @default(autoincrement())
+  orderId   Int
+  status    OrderStatus
+  note      String?     @db.VarChar(500)
+  adminId   Int?
+  createdAt DateTime    @default(now())
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+enum InventoryLogType {
+  IMPORT
+  ADJUSTMENT
+  ORDER_DEDUCT
+  RETURN_RESTORE
+}
+
+model InventoryLog {
+  id             Int              @id @default(autoincrement())
+  productId      Int
+  type           InventoryLogType
+  quantityBefore Int
+  quantityChange Int
+  quantityAfter  Int
+  reference      String?          @db.VarChar(200)
+  note           String?          @db.VarChar(500)
+  adminId        Int?
+  createdAt      DateTime         @default(now())
+  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, createdAt])
+  @@index([type, createdAt])
+  @@index([createdAt])
+}
+
+enum VoucherType {
+  PERCENT
+  FIXED
+}
+
+model Voucher {
+  id             Int            @id @default(autoincrement())
+  code           String         @unique @db.VarChar(50)
+  name           String         @db.VarChar(191)
+  type           VoucherType
+  value          Int
+  maxDiscount    Int?
+  minOrderAmount Int            @default(0)
+  startAt        DateTime?
+  endAt          DateTime?
+  usageLimit     Int?
+  usageCount     Int            @default(0)
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  usages         VoucherUsage[]
+
+  @@index([code])
+  @@index([isActive, startAt, endAt])
+}
+
+model VoucherUsage {
+  id             Int      @id @default(autoincrement())
+  voucherId      Int
+  orderId        Int      @unique
+  userId         Int
+  discountAmount Int
+  createdAt      DateTime @default(now())
+  voucher        Voucher  @relation(fields: [voucherId], references: [id], onDelete: Restrict)
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([voucherId])
+  @@index([userId])
+}
+
+enum ReturnStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model ReturnRequest {
+  id          Int          @id @default(autoincrement())
+  orderId     Int
+  userId      Int
+  reason      String       @db.VarChar(200)
+  description String?      @db.VarChar(1000)
+  status      ReturnStatus @default(PENDING)
+  adminNote   String?      @db.VarChar(500)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  order       Order        @relation(fields: [orderId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([status])
 }

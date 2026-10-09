@@ -23,6 +23,15 @@ import { adminAttributeRouter, publicAttributeRouter } from './src/routes/v1/att
 import wishlistRoutes from './src/routes/v1/wishlist.route.js';
 import addressRoutes from './src/routes/v1/address.route.js';
 import reviewRoutes from './src/routes/v1/review.route.js';
+import orderRoutes from './src/routes/v1/order.route.js';
+import adminOrderRoutes from './src/routes/v1/adminOrder.route.js';
+import adminCustomerRoutes from './src/routes/v1/adminCustomer.route.js';
+import adminReturnRoutes from './src/routes/v1/adminReturn.route.js';
+import adminReportRoutes from './src/routes/v1/adminReport.route.js';
+import adminInventoryRoutes from './src/routes/v1/adminInventory.route.js';
+import adminReviewRoutes from './src/routes/v1/adminReview.route.js';
+import adminVoucherRoutes from './src/routes/v1/adminVoucher.route.js';
+import voucherRoutes from './src/routes/v1/voucher.route.js';
 import { verifyResetMailConnection } from './src/services/passwordResetMail.service.js';
 import { cleanupExpiredPasswordResets } from './src/services/passwordReset.service.js';
 
@@ -88,6 +97,15 @@ app.use('/api/attributes', publicAttributeRouter);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/admin/orders', adminOrderRoutes);
+app.use('/api/admin/customers', adminCustomerRoutes);
+app.use('/api/admin/returns', adminReturnRoutes);
+app.use('/api/admin/reports', adminReportRoutes);
+app.use('/api/admin/inventory', adminInventoryRoutes);
+app.use('/api/admin/reviews', adminReviewRoutes);
+app.use('/api/admin/vouchers', adminVoucherRoutes);
+app.use('/api/vouchers', voucherRoutes);
 app.use('/media/banners', express.static(bannerMediaDirectory, {
   dotfiles: 'deny',
   immutable: true,

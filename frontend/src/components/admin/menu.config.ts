@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Badge,
+  BarChart2,
   Check,
   ClipboardList,
   CreditCard,
@@ -59,6 +60,7 @@ export const dashboardMenu: DashboardMenuGroup[] = [
       { label: 'Quản lý Banner', path: '/admin/banners', icon: Image },
       { label: 'Khối sản phẩm', path: '/admin/product-sections', icon: PanelTop },
       { label: 'Khuyến mãi', path: '/admin/promotions', icon: TicketPercent },
+      { label: 'Đánh giá', path: '/admin/reviews', icon: Star },
     ],
   },
   {
@@ -70,7 +72,7 @@ export const dashboardMenu: DashboardMenuGroup[] = [
       { label: 'Thanh toán', path: '/admin/payments', icon: CreditCard },
       { label: 'Vận chuyển', path: '/admin/shipping', icon: Truck },
       { label: 'Đổi trả', path: '/admin/returns', icon: Undo2 },
-      { label: 'Đánh giá', path: '/admin/reviews', icon: Star },
+      { label: 'Báo cáo bán hàng', path: '/admin/reports', icon: BarChart2 },
     ],
   },
   {

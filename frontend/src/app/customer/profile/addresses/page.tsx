@@ -4,9 +4,11 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   MapPin, ChevronRight, Plus, Home, Briefcase, Star, Pencil, Trash2,
-  CheckCircle2, AlertCircle, X, RotateCcw,
+  AlertCircle, RotateCcw,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import {
   getAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress,
 } from '@/services/address.service';
@@ -17,30 +19,6 @@ import AddressForm from './AddressForm';
 
 function typeLabel(t: string) { return t === 'OFFICE' ? 'Văn phòng' : 'Nhà riêng'; }
 function typeIcon(t: string) { return t === 'OFFICE' ? Briefcase : Home; }
-
-// ─── confirm dialog ───────────────────────────────────────────────────────────
-
-function ConfirmDialog({ message, onConfirm, onCancel }: {
-  message: string; onConfirm: () => void; onCancel: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-        <p className="text-sm text-slate-700">{message}</p>
-        <div className="mt-5 flex justify-end gap-3">
-          <button onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
-            Hủy
-          </button>
-          <button onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
-            Xóa
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── address card ──────────────────────────────────────────────────────────────
 
@@ -101,20 +79,15 @@ function AddressCard({ addr, onEdit, onDelete, onSetDefault, settingDefault }: {
 
 export default function AddressesPage() {
   const { user, token } = useAuthStore();
-  const [addresses, setAddresses]   = useState<Address[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [toast, setToast]           = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const toast   = useToast();
+  const confirm = useConfirm();
 
-  const [formOpen, setFormOpen]     = useState(false);
-  const [editing, setEditing]       = useState<Address | null>(null);
-  const [confirmId, setConfirmId]   = useState<number | null>(null);
-  const [settingId, setSettingId]   = useState<number | null>(null);
-
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [formOpen, setFormOpen]   = useState(false);
+  const [editing, setEditing]     = useState<Address | null>(null);
+  const [settingId, setSettingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -138,7 +111,7 @@ export default function AddressesPage() {
             : prev.map(a => a.id === updated.id ? updated : a);
           return list.sort((a, b) => +b.isDefault - +a.isDefault);
         });
-        showToast('Đã cập nhật địa chỉ.');
+        toast.success('Đã cập nhật địa chỉ.');
       } else {
         updated = await createAddress(token, input);
         setAddresses(prev => {
@@ -147,23 +120,27 @@ export default function AddressesPage() {
             : [...prev];
           return [...list, updated].sort((a, b) => +b.isDefault - +a.isDefault);
         });
-        showToast('Đã thêm địa chỉ.');
+        toast.success('Đã thêm địa chỉ.');
       }
       setFormOpen(false); setEditing(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Đã có lỗi xảy ra.', 'error');
+      toast.error(err instanceof Error ? err.message : 'Đã có lỗi xảy ra.');
     }
   };
 
-  const handleDelete = async () => {
-    if (!token || confirmId === null) return;
-    const id = confirmId; setConfirmId(null);
+  const handleDelete = async (id: number) => {
+    const ok = await confirm({
+      title: 'Xóa địa chỉ',
+      description: 'Bạn có chắc muốn xóa địa chỉ này không?',
+      destructive: true,
+    });
+    if (!ok || !token) return;
     try {
       await deleteAddress(token, id);
       setAddresses(prev => prev.filter(a => a.id !== id));
-      showToast('Đã xóa địa chỉ.');
+      toast.success('Đã xóa địa chỉ.');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể xóa.', 'error');
+      toast.error(err instanceof Error ? err.message : 'Không thể xóa.');
     }
   };
 
@@ -176,9 +153,9 @@ export default function AddressesPage() {
         prev.map(a => ({ ...a, isDefault: a.id === updated.id }))
           .sort((a, b) => +b.isDefault - +a.isDefault)
       );
-      showToast('Đã đặt làm địa chỉ mặc định.');
+      toast.success('Đã đặt làm địa chỉ mặc định.');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể đặt mặc định.', 'error');
+      toast.error(err instanceof Error ? err.message : 'Không thể đặt mặc định.');
     } finally { setSettingId(null); }
   };
 
@@ -192,23 +169,6 @@ export default function AddressesPage() {
 
   return (
     <>
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed right-4 top-4 z-[60] flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-lg ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-          {toast.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-          {toast.msg}
-        </div>
-      )}
-
-      {/* Confirm delete */}
-      {confirmId !== null && (
-        <ConfirmDialog
-          message="Bạn có chắc muốn xóa địa chỉ này không?"
-          onConfirm={handleDelete}
-          onCancel={() => setConfirmId(null)}
-        />
-      )}
-
       {/* Address form modal */}
       {formOpen && (
         <AddressForm
@@ -299,7 +259,7 @@ export default function AddressesPage() {
                   key={addr.id}
                   addr={addr}
                   onEdit={() => { setEditing(addr); setFormOpen(true); }}
-                  onDelete={() => setConfirmId(addr.id)}
+                  onDelete={() => handleDelete(addr.id)}
                   onSetDefault={() => handleSetDefault(addr.id)}
                   settingDefault={settingId === addr.id}
                 />
