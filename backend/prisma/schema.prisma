@@ -8,35 +8,37 @@ generator client {
 }
 
 model Product {
-  id                Int                    @id @default(autoincrement())
-  name              String                 @db.VarChar(191)
-  slug              String                 @unique @db.VarChar(191)
-  sku               String                 @unique @db.VarChar(100)
-  category          String?                @db.VarChar(100)
+  id                Int                     @id @default(autoincrement())
+  name              String                  @db.VarChar(191)
+  slug              String                  @unique @db.VarChar(191)
+  sku               String                  @unique @db.VarChar(100)
+  category          String?                 @db.VarChar(100)
   categoryId        Int?
-  brand             String?                @db.VarChar(191)
+  brand             String?                 @db.VarChar(191)
   brandId           Int?
-  shortDescription  String?                @db.VarChar(500)
-  description       String?                @db.Text
+  shortDescription  String?                 @db.VarChar(500)
+  description       String?                 @db.Text
   price             Int
   originalPrice     Int?
   costPrice         Int?
-  stockQuantity     Int                    @default(0)
-  lowStockThreshold Int                    @default(5)
-  isActive          Boolean                @default(true)
-  isDeleted         Boolean                @default(false)
+  stockQuantity     Int                     @default(0)
+  lowStockThreshold Int                     @default(5)
+  isActive          Boolean                 @default(true)
+  isDeleted         Boolean                 @default(false)
   deletedAt         DateTime?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
   sectionItems      ProductSectionItem[]
   images            ProductImage[]
   specifications    ProductSpecification[]
   highlightSpecs    ProductHighlightSpec[]
+  attributeValues   ProductAttributeValue[]
   reviews           ProductReview[]
   comments          ProductComment[]
   views             ProductView[]
-  categoryRecord    Category?              @relation("ProductCategory", fields: [categoryId], references: [id], onDelete: Restrict)
-  brandRecord       Brand?                 @relation("ProductBrand", fields: [brandId], references: [id], onDelete: Restrict)
+  wishlistItems     WishlistItem[]
+  categoryRecord    Category?               @relation("ProductCategory", fields: [categoryId], references: [id], onDelete: Restrict)
+  brandRecord       Brand?                  @relation("ProductBrand", fields: [brandId], references: [id], onDelete: Restrict)
 
   @@index([isActive, isDeleted, stockQuantity])
   @@index([category])
@@ -64,21 +66,23 @@ model Brand {
 }
 
 model Category {
-  id          Int            @id @default(autoincrement())
-  name        String         @db.VarChar(191)
-  slug        String         @unique @db.VarChar(191)
-  description String?        @db.Text
-  icon        String?        @db.VarChar(64)
+  id          Int                 @id @default(autoincrement())
+  name        String              @db.VarChar(191)
+  slug        String              @unique @db.VarChar(191)
+  description String?             @db.Text
+  icon        String?             @db.VarChar(64)
   parentId    Int?
-  sortOrder   Int            @default(0)
-  isActive    Boolean        @default(true)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  parent      Category?      @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children    Category[]     @relation("CategoryTree")
-  products    Product[]      @relation("ProductCategory")
+  sortOrder   Int                 @default(0)
+  isActive    Boolean             @default(true)
+  skuPrefix   String?             @unique @db.VarChar(8)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  parent      Category?           @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Category[]          @relation("CategoryTree")
+  products    Product[]           @relation("ProductCategory")
   megaMenu    MegaMenu?
-  menuItems   MegaMenuItem[] @relation("MenuItemCategory")
+  menuItems   MegaMenuItem[]      @relation("MenuItemCategory")
+  attributes  CategoryAttribute[]
 
   @@index([parentId, sortOrder])
   @@index([isActive, sortOrder])
@@ -117,24 +121,98 @@ model MegaMenuGroup {
 }
 
 model MegaMenuItem {
-  id             Int              @id @default(autoincrement())
-  groupId        Int
-  label          String           @db.VarChar(191)
-  type           MegaMenuItemType
-  categoryId     Int?
-  brandId        Int?
-  attributeName  String?          @db.VarChar(100)
-  attributeValue String?          @db.VarChar(500)
-  minPrice       Int?
-  maxPrice       Int?
-  customUrl      String?          @db.VarChar(1000)
-  sortOrder      Int              @default(0)
-  isActive       Boolean          @default(true)
-  group          MegaMenuGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  category       Category?        @relation("MenuItemCategory", fields: [categoryId], references: [id], onDelete: SetNull)
-  brand          Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  id               Int              @id @default(autoincrement())
+  groupId          Int
+  label            String           @db.VarChar(191)
+  type             MegaMenuItemType
+  categoryId       Int?
+  brandId          Int?
+  attributeName    String?          @db.VarChar(100)
+  attributeValue   String?          @db.VarChar(500)
+  attributeId      Int?
+  attributeValueId Int?
+  minPrice         Int?
+  maxPrice         Int?
+  customUrl        String?          @db.VarChar(1000)
+  sortOrder        Int              @default(0)
+  isActive         Boolean          @default(true)
+  group            MegaMenuGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  category         Category?        @relation("MenuItemCategory", fields: [categoryId], references: [id], onDelete: SetNull)
+  brand            Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  attribute        Attribute?       @relation(fields: [attributeId], references: [id], onDelete: SetNull)
+  attributeOption  AttributeValue?  @relation(fields: [attributeValueId], references: [id], onDelete: SetNull)
 
   @@index([groupId, isActive, sortOrder])
+  @@index([attributeId])
+  @@index([attributeValueId])
+}
+
+enum AttributeType {
+  SELECT
+  MULTI_SELECT
+  TEXT
+  NUMBER
+  BOOLEAN
+}
+
+model Attribute {
+  id            Int                     @id @default(autoincrement())
+  name          String                  @db.VarChar(191)
+  slug          String                  @unique @db.VarChar(191)
+  type          AttributeType
+  sortOrder     Int                     @default(0)
+  isActive      Boolean                 @default(true)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  values        AttributeValue[]
+  categories    CategoryAttribute[]
+  productValues ProductAttributeValue[]
+  menuItems     MegaMenuItem[]
+
+  @@index([isActive, sortOrder])
+}
+
+model AttributeValue {
+  id            Int                     @id @default(autoincrement())
+  attributeId   Int
+  value         String                  @db.VarChar(500)
+  sortOrder     Int                     @default(0)
+  isActive      Boolean                 @default(true)
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  attribute     Attribute               @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  productValues ProductAttributeValue[]
+  menuItems     MegaMenuItem[]
+
+  @@unique([attributeId, value])
+  @@index([attributeId, isActive, sortOrder])
+}
+
+model CategoryAttribute {
+  categoryId  Int
+  attributeId Int
+  sortOrder   Int       @default(0)
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  attribute   Attribute @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+
+  @@id([categoryId, attributeId])
+  @@index([attributeId])
+}
+
+model ProductAttributeValue {
+  id               Int             @id @default(autoincrement())
+  productId        Int
+  attributeId      Int
+  attributeValueId Int?
+  valueText        String?         @db.VarChar(1000)
+  createdAt        DateTime        @default(now())
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attribute        Attribute       @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  attributeValue   AttributeValue? @relation(fields: [attributeValueId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, attributeId, attributeValueId])
+  @@index([attributeId, attributeValueId])
+  @@index([productId, attributeId])
 }
 
 model MegaMenuBrand {
@@ -225,16 +303,17 @@ model ProductView {
 }
 
 model ProductSection {
-  id         Int                  @id @default(autoincrement())
-  name       String
-  slug       String               @unique
-  subtitle   String?
-  viewAllUrl String?
-  sortOrder  Int                  @default(0)
-  isActive   Boolean              @default(true)
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
-  items      ProductSectionItem[]
+  id                  Int                  @id @default(autoincrement())
+  name                String
+  slug                String               @unique
+  subtitle            String?
+  viewAllUrl          String?              @db.VarChar(1000)
+  sortOrder           Int                  @default(0)
+  isActive            Boolean              @default(true)
+  showHighlightSpecs  Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  items               ProductSectionItem[]
 }
 
 model ProductSectionItem {
@@ -252,18 +331,39 @@ model ProductSectionItem {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
+  id           Int             @id @default(autoincrement())
   fullName     String
-  email        String   @unique
-  phone        String?  @unique
+  email        String          @unique
+  phone        String?         @unique
   passwordHash String
-  googleId     String?  @unique @db.VarChar(191)
-  avatarUrl    String?  @db.VarChar(1000)
-  role         String   @default("USER")
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  googleId     String?         @unique @db.VarChar(191)
+  avatarUrl    String?         @db.VarChar(1000)
+  role         String          @default("USER")
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   reviews      ProductReview[]
+  wishlist     Wishlist?
+  addresses    Address[]
+}
+
+model Address {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  fullName      String   @db.VarChar(191)
+  phone         String   @db.VarChar(20)
+  provinceCode  String   @db.VarChar(10)
+  provinceName  String   @db.VarChar(191)
+  communeCode   String   @db.VarChar(10)
+  communeName   String   @db.VarChar(191)
+  streetAddress String   @db.VarChar(500)
+  addressType   String   @default("HOME") @db.VarChar(20)
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDefault])
 }
 
 model GoogleLoginExchange {
@@ -330,4 +430,26 @@ model Banner {
   updatedAt        DateTime       @updatedAt
 
   @@index([position, isActive, sortOrder])
+}
+
+model Wishlist {
+  userId    Int            @id
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WishlistItem[]
+
+  @@index([updatedAt])
+}
+
+model WishlistItem {
+  id           Int      @id @default(autoincrement())
+  wishlistId   Int
+  productId    Int
+  createdAt    DateTime @default(now())
+  wishlist     Wishlist @relation(fields: [wishlistId], references: [userId], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([wishlistId, productId])
+  @@index([productId])
 }

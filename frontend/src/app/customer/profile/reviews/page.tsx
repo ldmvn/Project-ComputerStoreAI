@@ -1,0 +1,279 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import {
+  Star, ChevronRight, MessageSquare, AlertCircle, RotateCcw,
+  Trash2, CheckCircle2, Clock, ShoppingBag, X,
+} from 'lucide-react';
+import { useAuthStore } from '@/store/auth.store';
+import { getMyReviews, deleteMyReview } from '@/services/review.service';
+import { mediaUrl } from '@/services/http.client';
+import type { MyReview } from '@/types/review.type';
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {[1,2,3,4,5].map(i => (
+        <Star key={i} className={`h-3.5 w-3.5 ${i <= rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+      ))}
+    </span>
+  );
+}
+
+// ─── confirm dialog ───────────────────────────────────────────────────────────
+
+function ConfirmDialog({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+        <p className="text-sm text-slate-700">Bạn có chắc muốn xóa đánh giá này không?</p>
+        <div className="mt-5 flex justify-end gap-3">
+          <button onClick={onCancel}
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+            Hủy
+          </button>
+          <button onClick={onConfirm}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
+            Xóa
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── review card ──────────────────────────────────────────────────────────────
+
+function ReviewCard({ review, onDelete }: { review: MyReview; onDelete: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = review.content.length > 200;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {/* Product row */}
+      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+          {review.product.imageUrl ? (
+            <Image src={mediaUrl(review.product.imageUrl)} alt={review.product.name} fill className="object-contain p-1" sizes="40px" />
+          ) : (
+            <ShoppingBag className="absolute inset-0 m-auto h-5 w-5 text-slate-300" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <Link href={`/customer/products/${review.product.slug}`}
+            className="line-clamp-1 text-sm font-medium text-slate-700 hover:text-primary-600">
+            {review.product.name}
+          </Link>
+          <p className="text-xs text-slate-400">{formatDate(review.createdAt)}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${review.isPublished ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+            {review.isPublished ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+            {review.isPublished ? 'Đã duyệt' : 'Chờ duyệt'}
+          </span>
+          <button onClick={onDelete}
+            className="rounded-lg border border-slate-200 p-1.5 text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 py-3">
+        <StarRow rating={review.rating} />
+        <p className={`mt-2 text-sm leading-relaxed text-slate-700 ${!expanded && long ? 'line-clamp-3' : ''}`}>
+          {review.content}
+        </p>
+        {long && (
+          <button onClick={() => setExpanded(v => !v)}
+            className="mt-1 text-xs text-primary-600 hover:underline">
+            {expanded ? 'Thu gọn' : 'Xem thêm'}
+          </button>
+        )}
+
+        {/* Images */}
+        {review.images.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {review.images.map((img, i) => (
+              <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+                <Image src={mediaUrl(img)} alt={`Ảnh ${i+1}`} fill className="object-cover" sizes="64px" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── main page ────────────────────────────────────────────────────────────────
+
+const LIMIT = 10;
+
+export default function ReviewsPage() {
+  const { user, token } = useAuthStore();
+
+  const [reviews, setReviews] = useState<MyReview[]>([]);
+  const [total, setTotal]     = useState(0);
+  const [page, setPage]       = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+  const [toast, setToast]     = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
+
+  const totalPages = Math.ceil(total / LIMIT);
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const load = useCallback(async (p = 1) => {
+    if (!token) return;
+    setLoading(true); setError(null);
+    try {
+      const res = await getMyReviews(token, p, LIMIT);
+      setReviews(res.reviews); setTotal(res.total); setPage(p);
+    } catch { setError('Không thể tải đánh giá của bạn.'); }
+    finally { setLoading(false); }
+  }, [token]);
+
+  useEffect(() => { load(1); }, [load]);
+
+  const handleDelete = async () => {
+    if (!token || confirmId === null) return;
+    const id = confirmId; setConfirmId(null);
+    try {
+      await deleteMyReview(token, id);
+      setReviews(prev => prev.filter(r => r.id !== id));
+      setTotal(t => t - 1);
+      showToast('Đã xóa đánh giá.');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Không thể xóa.');
+    }
+  };
+
+  if (!user) return null;
+
+  // stats
+  const published  = reviews.filter(r => r.isPublished).length;
+  const pending    = reviews.filter(r => !r.isPublished).length;
+  const avgRating  = reviews.length
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : '—';
+
+  return (
+    <>
+      {toast && (
+        <div className="fixed right-4 top-4 z-[60] flex items-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-lg">
+          <CheckCircle2 className="h-4 w-4" /> {toast}
+        </div>
+      )}
+
+      {confirmId !== null && (
+        <ConfirmDialog onConfirm={handleDelete} onCancel={() => setConfirmId(null)} />
+      )}
+
+      {/* Breadcrumb */}
+      <nav className="mb-4 flex items-center gap-1.5 text-sm text-slate-500">
+        <Link href="/" className="hover:text-primary-600">Trang chủ</Link>
+        <ChevronRight size={14} />
+        <Link href="/customer/profile" className="hover:text-primary-600">Tài khoản</Link>
+        <ChevronRight size={14} />
+        <span className="text-slate-700">Đánh giá của tôi</span>
+      </nav>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+            <Star className="h-5 w-5" />
+          </span>
+          <div>
+            <h1 className="text-lg font-bold text-slate-800">Đánh giá của tôi</h1>
+            <p className="text-sm text-slate-500">Các đánh giá bạn đã gửi</p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 border-y border-slate-200">
+          {loading ? (
+            [1,2,3].map((_, i) => (
+              <div key={i} className={`px-5 py-4 ${i < 2 ? 'border-r border-slate-200' : ''}`}>
+                <div className="h-7 w-8 animate-pulse rounded bg-slate-100" />
+                <div className="mt-1.5 h-3.5 w-16 animate-pulse rounded bg-slate-100" />
+              </div>
+            ))
+          ) : [
+            { label: 'Tổng đánh giá', value: total },
+            { label: 'Đã duyệt',       value: loading ? '—' : published },
+            { label: 'Điểm TB',         value: avgRating },
+          ].map((s, i) => (
+            <div key={s.label} className={`px-5 py-4 ${i < 2 ? 'border-r border-slate-200' : ''}`}>
+              <p className="text-2xl font-bold tabular-nums text-primary-600">{s.value}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* List */}
+        <div className="space-y-3 p-4 sm:p-5">
+          {loading ? (
+            [1,2,3].map(i => <div key={i} className="h-32 animate-pulse rounded-xl bg-slate-100" />)
+          ) : error ? (
+            <div className="py-10 text-center">
+              <AlertCircle className="mx-auto h-10 w-10 text-red-300" />
+              <p className="mt-3 text-sm text-slate-500">{error}</p>
+              <button onClick={() => load(page)}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                <RotateCcw className="h-4 w-4" /> Thử lại
+              </button>
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="py-12 text-center">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                <MessageSquare className="h-7 w-7 text-slate-300" />
+              </span>
+              <p className="mt-3 font-semibold text-slate-700">Bạn chưa có đánh giá nào</p>
+              <p className="mt-1 text-sm text-slate-400">Mua hàng và chia sẻ trải nghiệm của bạn</p>
+              <Link href="/customer/products"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700">
+                Mua sắm ngay
+              </Link>
+            </div>
+          ) : (
+            reviews.map(r => (
+              <ReviewCard key={r.id} review={r} onDelete={() => setConfirmId(r.id)} />
+            ))
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1 pt-2">
+              <button onClick={() => load(page - 1)} disabled={page === 1}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 disabled:opacity-40 hover:bg-slate-50">
+                Trước
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button key={p} onClick={() => load(p)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${page === p ? 'bg-primary-600 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                  {p}
+                </button>
+              ))}
+              <button onClick={() => load(page + 1)} disabled={page === totalPages}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 disabled:opacity-40 hover:bg-slate-50">
+                Sau
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

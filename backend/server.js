@@ -19,6 +19,10 @@ import { bannerMediaDirectory } from './src/services/media.service.js';
 import { productMediaDirectory } from './src/services/productMedia.service.js';
 import { brandMediaDirectory } from './src/services/brandMedia.service.js';
 import { reviewMediaDirectory } from './src/services/reviewMedia.service.js';
+import { adminAttributeRouter, publicAttributeRouter } from './src/routes/v1/attribute.route.js';
+import wishlistRoutes from './src/routes/v1/wishlist.route.js';
+import addressRoutes from './src/routes/v1/address.route.js';
+import reviewRoutes from './src/routes/v1/review.route.js';
 import { verifyResetMailConnection } from './src/services/passwordResetMail.service.js';
 import { cleanupExpiredPasswordResets } from './src/services/passwordReset.service.js';
 
@@ -79,6 +83,11 @@ app.use('/api/product-sections', publicProductSectionRouter);
 app.use('/api/admin/product-sections', adminProductSectionRouter);
 app.use('/api/products', publicProductRouter);
 app.use('/api/admin/products', adminProductRouter);
+app.use('/api/admin/attributes', adminAttributeRouter);
+app.use('/api/attributes', publicAttributeRouter);
+app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/addresses', addressRoutes);
+app.use('/api/reviews', reviewRoutes);
 app.use('/media/banners', express.static(bannerMediaDirectory, {
   dotfiles: 'deny',
   immutable: true,
