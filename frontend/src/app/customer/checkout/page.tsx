@@ -1,2 +1,2 @@
-import CartSummary from '@/components/product/CartSummary';
-export default function Page({ searchParams }: { searchParams: { product?: string } }) { return <CartSummary checkout selectedSlug={searchParams.product} />; }
+import CartView from '@/components/cart/CartView';
+export default function Page({ searchParams }: { searchParams: { product?: string } }) { return <CartView checkout selectedSlug={searchParams.product} />; }

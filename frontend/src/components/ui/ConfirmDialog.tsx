@@ -88,9 +88,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
 const TONE_STYLES: Record<ConfirmTone, { icon: string; iconWrap: string; confirmButton: string }> = {
   danger: {
-    icon: 'text-rose-600',
-    iconWrap: 'bg-rose-100 text-rose-600',
-    confirmButton: 'bg-rose-600 text-white hover:bg-rose-700 focus-visible:outline-rose-600',
+    icon: 'text-red-600',
+    iconWrap: 'bg-red-100 text-red-600',
+    confirmButton: 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600',
   },
   warning: {
     icon: 'text-amber-600',

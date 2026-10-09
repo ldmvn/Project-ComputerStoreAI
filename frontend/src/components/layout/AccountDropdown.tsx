@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -36,7 +36,7 @@ export default function AccountDropdown({ user }: { user: AuthUser }) {
     };
   }, [open]);
 
-  const itemClass = 'ui-menu-item flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-700 hover:bg-orange-50 hover:text-orange-700 focus-visible:-outline-offset-2';
+  const itemClass = 'ui-menu-item flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-700 hover:bg-primary-50 hover:text-primary-700 focus-visible:-outline-offset-2';
 
   return (
     <div

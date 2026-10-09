@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -43,10 +43,10 @@ const policyLinks = [
 ];
 
 const trustBadges = [
-  { icon: Shield, label: 'Bảo hành chính hãng' },
-  { icon: Truck, label: 'Giao hàng toàn quốc' },
-  { icon: RotateCcw, label: 'Đổi trả 30 ngày' },
-  { icon: CreditCard, label: 'Thanh toán an toàn' },
+  { icon: Shield,    label: 'Bảo hành chính hãng', href: '/policy/warranty' },
+  { icon: Truck,     label: 'Giao hàng toàn quốc', href: '/shipping'        },
+  { icon: RotateCcw, label: 'Đổi trả 30 ngày',     href: '/policy/return'   },
+  { icon: CreditCard,label: 'Thanh toán an toàn',  href: '/policy/payment'  },
 ];
 
 export default function Footer({ compact = false }: { compact?: boolean }) {
@@ -63,29 +63,25 @@ export default function Footer({ compact = false }: { compact?: boolean }) {
     }
   };
 
-  if (compact) return <footer className="mt-auto border-t border-slate-200 bg-white py-6"><div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-sm sm:flex-row"><Link href="/" className="font-bold tracking-tight text-slate-800">DUCMANH PC</Link><Link href="/customer/products" className="text-slate-500 hover:text-orange-700">Khám phá sản phẩm</Link><p className="text-xs text-slate-400">© 2026 DUCMANH PC</p></div></footer>;
+  if (compact) return <footer className="mt-auto border-t border-slate-200 bg-white py-6"><div className="container mx-auto flex flex-col items-center justify-between gap-3 px-4 text-sm sm:flex-row"><Link href="/" className="font-bold tracking-tight text-slate-800">DUCMANH PC</Link><Link href="/customer/products" className="text-slate-500 hover:text-primary-700">Khám phá sản phẩm</Link><p className="text-xs text-slate-400">© 2026 DUCMANH PC</p></div></footer>;
   return (
     <footer className="mt-auto border-t border-slate-200 bg-slate-50">
       {/* ===== Trust Badges ===== */}
       <div className="border-b border-slate-200">
-        <div className="container mx-auto px-4 py-8">
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-            {trustBadges.map((badge) => {
-              const Icon = badge.icon;
-              return (
-                <div
-                  key={badge.label}
-                  className="flex items-center gap-3"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <span className="text-sm font-medium text-slate-700">
-                    {badge.label}
-                  </span>
-                </div>
-              );
-            })}
+        <div className="container mx-auto px-4 py-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+            {trustBadges.map(({ icon: Icon, label, href }) => (
+              <Link
+                key={label}
+                href={href}
+                className="flex items-center justify-center gap-2.5 rounded-xl px-3 py-2.5 transition-colors hover:bg-primary-50 md:justify-start"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+                  <Icon className="h-4 w-4" strokeWidth={2} />
+                </span>
+                <span className="text-sm font-medium text-slate-700">{label}</span>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

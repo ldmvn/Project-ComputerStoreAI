@@ -1,2 +1,2 @@
-import CartSummary from '@/components/product/CartSummary';
-export default function Page() { return <CartSummary />; }
+import CartView from '@/components/cart/CartView';
+export default function Page() { return <CartView />; }

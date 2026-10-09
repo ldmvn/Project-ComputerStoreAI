@@ -6,7 +6,7 @@ import type { SectionProduct } from '@/types/productSection.type';
 import ProductCard from './ProductCard';
 import styles from './HomeProductSections.module.css';
 
-export default function ProductSectionCarousel({ products, label }: { products: SectionProduct[]; label: string }) {
+export default function ProductSectionCarousel({ products, label, showHighlightSpecs = true }: { products: SectionProduct[]; label: string; showHighlightSpecs?: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState({ overflow: false, atStart: true, atEnd: true });
 
@@ -37,7 +37,7 @@ export default function ProductSectionCarousel({ products, label }: { products: 
   return (
     <div className={styles.carousel}>
       <div ref={trackRef} className={styles.track} role="region" aria-label={`Sản phẩm ${label}`} tabIndex={scroll.overflow ? 0 : undefined}>
-        {products.map(product => <ProductCard key={product.id} product={product} />)}
+        {products.map(product => <ProductCard key={product.id} product={product} showHighlightSpecs={showHighlightSpecs} />)}
       </div>
       {scroll.overflow && <>
         <button type="button" className={`${styles.arrow} ${styles.previous}`} aria-label={`Sản phẩm trước trong ${label}`} disabled={scroll.atStart} onClick={() => move(-1)}><ChevronLeft size={18} aria-hidden="true" /></button>

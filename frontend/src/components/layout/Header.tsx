@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -6,7 +6,9 @@ import { useState, useEffect, useRef } from 'react';
 import LoginModal from './LoginModal';
 import AccountDropdown from './AccountDropdown';
 import { useAuthStore } from '@/store/auth.store';
+import { useAuthModal } from '@/store/authModal.store';
 import { useCartStore } from '@/store/cart.store';
+import { useWishlistStore } from '@/store/wishlist.store';
 import {
   Search,
   ShoppingCart,
@@ -43,11 +45,30 @@ export default function Header() {
   const hydrateAuth = useAuthStore((state) => state.hydrate);
   const cartCount = useCartStore(state => state.items.reduce((count, item) => count + item.quantity, 0));
   const hydrateCart = useCartStore(state => state.hydrate);
+  const openAuthModal = useAuthModal(state => state.open);
+  const authModalOpen = useAuthModal(state => state.isOpen);
+  const closeAuthModal = useAuthModal(state => state.close);
   useEffect(() => { hydrateCart(); }, [hydrateCart]);
 
   useEffect(() => {
     void hydrateAuth();
   }, [hydrateAuth]);
+
+  // Hydrate wishlist on token change so other components see current state
+  const wishlistToken = useAuthStore(state => state.token);
+  // Confirmed server state, not the optimistic `ids` set, so the badge never over-reports.
+  const wishlistCount = useWishlistStore(state => state.items.length);
+  const wishlistHydrated = useWishlistStore(state => state.hydrated);
+  const hydrateWishlist = useWishlistStore(state => state.hydrate);
+  const clearWishlist = useWishlistStore(state => state.clear);
+  // Wait for auth to settle first: clearing on a not-yet-hydrated token marks the wishlist
+  // as hydrated, which would make the real fetch below be skipped once the token arrives.
+  const authHydrated = useAuthStore(state => state.isHydrated);
+  useEffect(() => {
+    if (!authHydrated) return;
+    if (wishlistToken) { if (!wishlistHydrated) void hydrateWishlist(wishlistToken); }
+    else { clearWishlist(); }
+  }, [authHydrated, wishlistToken, wishlistHydrated, hydrateWishlist, clearWishlist]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -134,11 +155,14 @@ export default function Header() {
           </button>
 
           {/* Categories Dropdown - icon + label giống các action khác */}
-          <div ref={categoriesRef} className="relative hidden lg:block" onMouseEnter={() => { cancelClose(); setCategoriesOpen(true); }} onMouseLeave={scheduleClose} onKeyDown={event => { if (event.key === 'Escape') { closeCategories(); categoriesRef.current?.querySelector('button')?.focus(); } }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) closeCategories(); }}>
+          {/* Stretches to the full header-row height so the dropdown's `top-full` anchors to the
+              header's bottom edge instead of the vertically-centred trigger, and so the gap
+              between button and header edge stays inside the hover area. */}
+          <div ref={categoriesRef} className="relative hidden self-stretch lg:flex lg:items-center" onMouseEnter={() => { cancelClose(); setCategoriesOpen(true); }} onMouseLeave={scheduleClose} onKeyDown={event => { if (event.key === 'Escape') { closeCategories(); categoriesRef.current?.querySelector('button')?.focus(); } }} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) closeCategories(); }}>
             <button
               type="button"
               onClick={toggleCategories}
-              className="ui-header-action inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-white transition hover:bg-white/15 hover:text-white"
+              className="ui-header-action inline-flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium text-slate-700 transition hover:bg-primary-50 hover:text-primary-600"
               aria-expanded={categoriesOpen}
               aria-controls="desktop-category-menu"
               aria-label="Danh mục"
@@ -171,7 +195,7 @@ export default function Header() {
 
             <div
               id="desktop-category-menu"
-              className={`absolute left-0 top-full z-50 flex max-h-[calc(100dvh-100px)] w-[min(1200px,calc(100vw-2rem))] items-stretch overflow-y-auto pt-3 origin-top-left transition-all duration-200 ${
+              className={`absolute left-0 top-full z-50 flex max-h-[calc(100dvh-100px)] w-[min(992px,calc(100vw-2rem))] xl:w-[min(1200px,calc(100vw-2rem))] items-stretch overflow-y-auto pt-3 origin-top-left transition-all duration-200 ${
                 categoriesOpen
                   ? 'visible translate-y-0 scale-100 opacity-100'
                   : 'invisible -translate-y-2 scale-95 opacity-0 pointer-events-none'
@@ -200,15 +224,15 @@ export default function Header() {
                       }}
                       className={`ui-menu-item ui-category-item group flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
                         isActive
-                          ? 'bg-red-50 text-red-600'
-                          : 'text-slate-700 hover:bg-red-50 hover:text-red-600'
+                          ? 'bg-primary-50 text-primary-600'
+                          : 'text-slate-700 hover:bg-primary-50 hover:text-primary-600'
                       }`}
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600 transition-colors group-hover:bg-red-100">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary-50 text-primary-600 transition-colors group-hover:bg-primary-100">
                         <Icon className="h-3.5 w-3.5" />
                       </span>
                       <span className="min-w-0 flex-1 truncate">{cat.name}</span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:text-red-600" />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:text-primary-600" />
                     </Link>
                   );
                 })}
@@ -243,7 +267,7 @@ export default function Header() {
             role="search"
           >
             <div className="ui-search relative w-full min-w-0 lg:w-3/4 lg:max-w-[500px]">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-orange-500" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-500" />
               <input
                 type="search"
                 value={searchQuery}
@@ -270,25 +294,35 @@ export default function Header() {
             {/* Wishlist */}
             <Link
               href="/customer/wishlist"
-              className="header-action"
-              aria-label="Yêu thích"
+              className="header-action relative"
               title="Yêu thích"
             >
-              <Heart className="h-5 w-5" />
+              <Heart className="h-5 w-5" aria-hidden="true" />
               <span className="hidden lg:inline">Yêu thích</span>
+              <span className="sr-only lg:hidden">Yêu thích</span>
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold tabular-nums text-white">
+                  {wishlistCount > 99 ? '99+' : wishlistCount}
+                  <span className="sr-only"> sản phẩm</span>
+                </span>
+              )}
             </Link>
 
             {/* Cart with badge */}
             <Link
               href="/customer/cart"
               className="header-action relative"
-              aria-label="Giỏ hàng"
+              title="Giỏ hàng"
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5" aria-hidden="true" />
               <span className="hidden lg:inline">Giỏ hàng</span>
-              <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-orange-600 shadow-sm">
-                {cartCount > 99 ? '99+' : cartCount}
-              </span>
+              <span className="sr-only lg:hidden">Giỏ hàng</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-600 px-1 text-[10px] font-bold tabular-nums text-white">
+                  {cartCount > 99 ? '99+' : cartCount}
+                  <span className="sr-only"> sản phẩm</span>
+                </span>
+              )}
             </Link>
 
             {isAdmin && (
@@ -307,7 +341,7 @@ export default function Header() {
             {user ? <AccountDropdown key={user.id} user={user} /> : (
             <button
               type="button"
-              onClick={() => setLoginOpen(true)}
+              onClick={() => openAuthModal()}
               className="header-action"
               aria-label="Đăng nhập"
             >
@@ -344,7 +378,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(false)}
-              className="ui-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-orange-50 hover:text-orange-600"
+              className="ui-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-primary-50 hover:text-primary-600"
               aria-label="Đóng menu danh mục"
             >
               <X className="h-5 w-5" aria-hidden="true" />
@@ -361,11 +395,11 @@ export default function Header() {
                 return (
                   <div key={cat.id}>
                     <div className="flex items-center gap-1">
-                      <Link href={categoryHref(cat.slug)} onClick={() => setMobileMenuOpen(false)} className="ui-menu-item ui-category-item flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors duration-150 hover:bg-orange-50 hover:text-orange-600">
+                      <Link href={categoryHref(cat.slug)} onClick={() => setMobileMenuOpen(false)} className="ui-menu-item ui-category-item flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors duration-150 hover:bg-primary-50 hover:text-primary-600">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><Icon className="h-4 w-4" aria-hidden="true" /></span>
                         <span className="min-w-0 truncate">{cat.name}</span>
                       </Link>
-                      {(cat.children.length > 0 || menus.some(menu => menu.category.id === cat.id && (menu.groups.length > 0 || menu.brands.length > 0))) && <button type="button" aria-label={`${expandedMobileCategory === cat.id ? 'Thu gọn' : 'Mở'} ${cat.name}`} aria-expanded={expandedMobileCategory === cat.id} onClick={() => setExpandedMobileCategory(current => current === cat.id ? null : cat.id)} className="ui-button flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-orange-50 hover:text-orange-600"><ChevronDown className={`h-4 w-4 transition-transform ${expandedMobileCategory === cat.id ? 'rotate-180' : ''}`} aria-hidden="true" /></button>}
+                      {(cat.children.length > 0 || menus.some(menu => menu.category.id === cat.id && (menu.groups.length > 0 || menu.brands.length > 0))) && <button type="button" aria-label={`${expandedMobileCategory === cat.id ? 'Thu gọn' : 'Mở'} ${cat.name}`} aria-expanded={expandedMobileCategory === cat.id} onClick={() => setExpandedMobileCategory(current => current === cat.id ? null : cat.id)} className="ui-button flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-primary-50 hover:text-primary-600"><ChevronDown className={`h-4 w-4 transition-transform ${expandedMobileCategory === cat.id ? 'rotate-180' : ''}`} aria-hidden="true" /></button>}
                     </div>
                     {expandedMobileCategory === cat.id && (() => {
                       const selected = menus.find(menu => menu.category.id === cat.id);
@@ -377,7 +411,7 @@ export default function Header() {
             </nav>
           </div>
         </aside>
-      <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
+      <LoginModal isOpen={authModalOpen} onClose={closeAuthModal} />
     </>
   );
 }

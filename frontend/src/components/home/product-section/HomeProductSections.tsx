@@ -62,7 +62,7 @@ export default function HomeProductSections() {
               </Link>
             )}
           </div>
-          <ProductSectionCarousel products={section.products} label={section.name} />
+          <ProductSectionCarousel products={section.products} label={section.name} showHighlightSpecs={section.showHighlightSpecs} />
         </section>
       ))}
     </div>

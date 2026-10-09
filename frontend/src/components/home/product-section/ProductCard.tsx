@@ -14,11 +14,13 @@ type CardProduct = SectionProduct & Partial<Pick<Product, 'images'>> & {
 
 const HIGHLIGHT_LIMIT = 3;
 
-export default function ProductCard({ product }: { product: CardProduct }) {
-  const highlightSpecs = (product.highlightSpecs || [])
-    .filter(spec => spec.content.trim())
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-    .slice(0, HIGHLIGHT_LIMIT);
+export default function ProductCard({ product, showHighlightSpecs = true }: { product: CardProduct; showHighlightSpecs?: boolean }) {
+  const highlightSpecs = showHighlightSpecs
+    ? (product.highlightSpecs || [])
+        .filter(spec => spec.content.trim())
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .slice(0, HIGHLIGHT_LIMIT)
+    : [];
   const originalPrice = product.originalPrice;
   const discounted = typeof originalPrice === 'number' && originalPrice > product.price && product.price >= 0;
   const discount = discounted ? Math.round((originalPrice - product.price) / originalPrice * 100) : 0;
@@ -27,13 +29,13 @@ export default function ProductCard({ product }: { product: CardProduct }) {
   return (
     <article className={`${styles.card} ${styles.productCard} ${highlightSpecs.length ? styles.withSpecifications : ''}`}>
       <div className={styles.productImage}>
-        {discounted && <span className={styles.discountBadge}>Giảm {discount}%</span>}
+        {discounted && discount >= 1 && <span className={styles.discountBadge}>Giảm {discount}%</span>}
         {image ? (
           <img src={mediaUrl(image)} alt={product.name} loading="lazy" decoding="async" />
         ) : <PackageOpen size={40} aria-hidden="true" />}
       </div>
       <div className={styles.productContent}>
-        <h3 className={styles.productName} title={product.name}>{product.slug ? <Link href={productDetailHref(product.slug)} className={styles.productLink} aria-label={`Xem chi tiết ${product.name}`}>{product.name}</Link> : product.name}</h3>
+        <h3 className={showHighlightSpecs ? styles.productName : styles.productNameExpanded} title={product.name}>{product.slug ? <Link href={productDetailHref(product.slug)} className={styles.productLink} aria-label={`Xem chi tiết ${product.name}`}>{product.name}</Link> : product.name}</h3>
         {highlightSpecs.length > 0 && (
           <ul className={styles.specifications} aria-label="Thông số nổi bật">
             {highlightSpecs.map((spec, index) => (
@@ -47,7 +49,7 @@ export default function ProductCard({ product }: { product: CardProduct }) {
           {discounted && (
             <div className={styles.originalPrice}>
               <span className="sr-only">Giá gốc </span><del>{formatPrice(originalPrice)}</del>
-              <span className={styles.discountPercent}>-{discount}%</span>
+              {discount >= 1 && <span className={styles.discountPercent}>Tiết kiệm {discount}%</span>}
             </div>
           )}
           <p className={styles.price}><span className="sr-only">Giá bán </span>{formatPrice(product.price)}</p>
